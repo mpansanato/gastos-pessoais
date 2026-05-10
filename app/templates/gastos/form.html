@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Editar Gasto — Gastos Pessoais{% endblock %}
+{% block page_title %}Editar Gasto{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center gap-2">
+                <i class="bi bi-pencil-square text-primary"></i>
+                <h6 class="mb-0 fw-semibold">Editar: {{ gasto.descricao }}</h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('gastos.editar', id=gasto.id) }}" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Descrição *</label>
+                        {{ form.descricao(class="form-control" + (" is-invalid" if form.descricao.errors else "")) }}
+                        {% for e in form.descricao.errors %}
+                            <div class="invalid-feedback">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Categoria *</label>
+                        {{ form.categoria_id(class="form-select" + (" is-invalid" if form.categoria_id.errors else "")) }}
+                        {% for e in form.categoria_id.errors %}
+                            <div class="invalid-feedback">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label fw-medium">Valor Previsto *</label>
+                            {{ form.valor_previsto(class="form-control" + (" is-invalid" if form.valor_previsto.errors else ""), placeholder="0,00") }}
+                            {% for e in form.valor_previsto.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-medium">Valor Pago</label>
+                            {{ form.valor_pago(class="form-control" + (" is-invalid" if form.valor_pago.errors else ""), placeholder="Vazio = não pago") }}
+                            {% for e in form.valor_pago.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% if not gasto.parcela_grupo_id %}
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Parcelas</label>
+                        {{ form.parcelas(class="form-select", id="parcelasSelectEdit") }}
+                        <div class="form-text text-info" id="parcelasInfoEdit" style="display:none;">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Serão criadas <span id="parcelasQtdEdit"></span> parcelas nos meses seguintes.
+                            O valor pago fica apenas na 1ª parcela.
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="mb-3">
+                        <div class="alert alert-info border-0 py-2 px-3 small mb-0">
+                            <i class="bi bi-grid-3x3-gap me-1"></i>
+                            Parcela <strong>{{ gasto.parcela_num }}/{{ gasto.parcela_total }}</strong> de um grupo parcelado.
+                            Editar aqui altera somente esta parcela.
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-4">
+                        <label class="form-label fw-medium">Observação</label>
+                        {{ form.observacao(class="form-control", rows="2", placeholder="Opcional") }}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        {{ form.submit(class="btn btn-primary fw-semibold") }}
+                        <a href="{{ url_for('gastos.por_mes', ano=gasto.ano, mes=gasto.mes) }}"
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Voltar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('parcelasSelectEdit')?.addEventListener('change', function () {
+    const info = document.getElementById('parcelasInfoEdit');
+    const qtd  = document.getElementById('parcelasQtdEdit');
+    const n = parseInt(this.value, 10);
+    if (n > 1) { qtd.textContent = n; info.style.display = ''; }
+    else        { info.style.display = 'none'; }
+});
+</script>
+{% endblock %}

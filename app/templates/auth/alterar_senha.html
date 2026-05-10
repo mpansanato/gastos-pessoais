@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Alterar Senha — Gastos Pessoais{% endblock %}
+{% block page_title %}Alterar Senha{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5 col-lg-4">
+        <div class="card">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="bi bi-key me-2 text-warning"></i>Alterar Senha
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('auth.alterar_senha') }}" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label for="senha_atual" class="form-label fw-medium">
+                            {{ form.senha_atual.label.text }}
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="bi bi-lock text-muted"></i>
+                            </span>
+                            {{ form.senha_atual(
+                                class="form-control border-start-0 ps-0" + (" is-invalid" if form.senha_atual.errors else ""),
+                                id="senha_atual",
+                                placeholder="Sua senha atual",
+                                autofocus=true
+                            ) }}
+                            {% for error in form.senha_atual.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="nova_senha" class="form-label fw-medium">
+                            {{ form.nova_senha.label.text }}
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="bi bi-lock-fill text-muted"></i>
+                            </span>
+                            {{ form.nova_senha(
+                                class="form-control border-start-0 ps-0" + (" is-invalid" if form.nova_senha.errors else ""),
+                                id="nova_senha",
+                                placeholder="Mínimo 8 caracteres"
+                            ) }}
+                            {% for error in form.nova_senha.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="confirmar_senha" class="form-label fw-medium">
+                            {{ form.confirmar_senha.label.text }}
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="bi bi-lock-fill text-muted"></i>
+                            </span>
+                            {{ form.confirmar_senha(
+                                class="form-control border-start-0 ps-0" + (" is-invalid" if form.confirmar_senha.errors else ""),
+                                id="confirmar_senha",
+                                placeholder="Repita a nova senha"
+                            ) }}
+                            {% for error in form.confirmar_senha.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        {{ form.submit(class="btn btn-warning fw-semibold") }}
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

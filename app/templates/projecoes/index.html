@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block title %}Projeções — Gastos Pessoais{% endblock %}
+{% block page_title %}Projeções Futuras{% endblock %}
+
+{% block content %}
+
+{% if sem_dados %}
+{# ── Sem dados ────────────────────────────────────────────────────────── #}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6 text-center">
+        <div class="card p-5">
+            <i class="bi bi-calendar-range fs-1 text-muted opacity-25 mb-3"></i>
+            <h5 class="fw-semibold">Nenhum dado de investimentos encontrado</h5>
+            <p class="text-muted mb-4">Adicione investimentos primeiro para gerar projeções.</p>
+            <a href="{{ url_for('investimentos.index') }}" class="btn btn-success">
+                <i class="bi bi-graph-up-arrow me-2"></i>Ir para Investimentos
+            </a>
+        </div>
+    </div>
+</div>
+
+{% else %}
+
+{# ── Contexto Financeiro ────────────────────────────────────────────────── #}
+{% if contexto.tem_salario %}
+<div class="card mb-4 border-0 bg-light">
+    <div class="card-body p-3">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <span class="fw-semibold small">
+                <i class="bi bi-calculator me-1 text-primary"></i>Contexto Financeiro
+            </span>
+            <span class="text-muted small">(base para definir seu aporte mensal)</span>
+        </div>
+        <div class="row g-3">
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">Salário
+                    {% if contexto.salario_ref %}<span class="text-muted">({{ contexto.salario_ref }})</span>{% endif %}
+                </div>
+                <div class="fw-bold text-success">{{ contexto.salario | brl }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">Gastos Fixos ({{ contexto.qtd_fixos }} ativos)</div>
+                <div class="fw-bold text-danger">- {{ contexto.total_fixos | brl }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">Média Gastos Totais (6m)</div>
+                <div class="fw-bold text-warning">- {{ contexto.media_gastos_6m | brl }}</div>
+            </div>
+            <div class="col-6 col-md-3 border-start">
+                <div class="text-muted small">Surplus estimado</div>
+                <div class="fw-bold {% if contexto.surplus_fixos >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                    {{ contexto.surplus_fixos | brl }}
+                </div>
+                <div class="text-muted" style="font-size:.7rem;">descontando só fixos</div>
+            </div>
+        </div>
+        {% if contexto.surplus_fixos > 0 or contexto.surplus_media > 0 %}
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <span class="text-muted small me-2 align-self-center">Usar como aporte:</span>
+            {% if contexto.surplus_fixos > 0 %}
+            <button type="button" class="btn btn-outline-primary btn-sm"
+                    onclick="preencherAporte({{ contexto.surplus_fixos | float }})">
+                <i class="bi bi-arrow-right-circle me-1"></i>
+                Surplus s/ fixos — {{ contexto.surplus_fixos | brl }}
+            </button>
+            {% endif %}
+            {% if contexto.surplus_media > 0 %}
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                    onclick="preencherAporte({{ contexto.surplus_media | float }})">
+                <i class="bi bi-arrow-right-circle me-1"></i>
+                Surplus médio 6m — {{ contexto.surplus_media | brl }}
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{# ── Painel de parâmetros + base ────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+    <div class="col-md-7">
+        <div class="card h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="bi bi-sliders me-2 text-primary"></i>Parâmetros da Projeção
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('projecoes.index') }}" novalidate>
+                    {{ form.hidden_tag() }}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-medium small">
+                                {{ form.rendimento_mensal_pct.label.text }}
+                                <span class="text-muted">(ex: 1.0 = 1%/mês)</span>
+                            </label>
+                            {{ form.rendimento_mensal_pct(
+                                class="form-control" + (" is-invalid" if form.rendimento_mensal_pct.errors else ""),
+                                placeholder="1.0000"
+                            ) }}
+                            {% for e in form.rendimento_mensal_pct.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-medium small">{{ form.aporte_mensal.label.text }}</label>
+                            {{ form.aporte_mensal(
+                                class="form-control" + (" is-invalid" if form.aporte_mensal.errors else ""),
+                                placeholder="0,00",
+                                id="aporte_mensal_input"
+                            ) }}
+                            {% for e in form.aporte_mensal.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-medium small">{{ form.meses_projecao.label.text }}</label>
+                            {{ form.meses_projecao(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        {{ form.submit(class="btn btn-primary btn-sm px-4") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="row g-3 h-100">
+            <div class="col-12">
+                <div class="card h-100">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <div class="stat-icon bg-success bg-opacity-10 text-success" style="width:36px;height:36px;font-size:1rem;">
+                                <i class="bi bi-pin-map"></i>
+                            </div>
+                            <span class="text-muted small">Base da projeção</span>
+                        </div>
+                        <div class="fw-bold fs-5 text-success">{{ base_valor | brl }}</div>
+                        <small class="text-muted">
+                            Patrimônio em <strong>{{ nome_mes_base }} {{ base_ano }}</strong>
+                            (mês mais recente com dados)
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card h-100">
+                    <div class="card-body p-3">
+                        <div class="text-muted small mb-1">Patrimônio projetado</div>
+                        <div class="fw-bold text-primary">
+                            {{ projecoes[-1].saldo_fim | brl if projecoes else '—' }}
+                        </div>
+                        {% if projecoes %}
+                        <small class="text-muted d-block">em {{ projecoes[-1].nome_mes }} {{ projecoes[-1].ano }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card h-100">
+                    <div class="card-body p-3">
+                        <div class="text-muted small mb-1">Rendimento total est.</div>
+                        {% set rendimento_total = projecoes | sum(attribute='rendimento') if projecoes else 0 %}
+                        <div class="fw-bold text-success">{{ rendimento_total | brl }}</div>
+                        <small class="text-muted">
+                            ao longo de {{ param.meses_projecao }} meses
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Tabela Real x Projetado ─────────────────────────────────────────────── #}
+<h6 class="text-uppercase text-muted fw-semibold mb-3" style="font-size:.72rem;letter-spacing:.08em;">
+    Evolução Patrimonial — Real e Projetado
+</h6>
+<div class="card mb-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Mês / Ano</th>
+                    <th>Tipo</th>
+                    <th class="text-end">Patrimônio / Saldo</th>
+                    <th class="text-end">Aporte</th>
+                    <th class="text-end">Rendimento Est.</th>
+                    <th class="text-end">Variação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {# Histórico real #}
+                {% for item in historico %}
+                <tr {% if item.mes == base_mes and item.ano == base_ano %}class="table-warning"{% endif %}>
+                    <td class="fw-medium">{{ item.nome_mes }} {{ item.ano }}</td>
+                    <td>
+                        {% if item.mes == base_mes and item.ano == base_ano %}
+                            <span class="badge bg-warning text-dark">Base</span>
+                        {% else %}
+                            <span class="badge bg-success bg-opacity-75">Real</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end fw-semibold">{{ item.total | brl }}</td>
+                    <td class="text-end text-muted">—</td>
+                    <td class="text-end text-muted">—</td>
+                    <td class="text-end">
+                        {% if loop.index0 > 0 %}
+                            {% set variacao = item.total - historico[loop.index0 - 1].total %}
+                            <span class="{{ 'text-success' if variacao >= 0 else 'text-danger' }} fw-semibold">
+                                {{ variacao | brl }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+
+                {# Projeções #}
+                {% for p in projecoes %}
+                <tr>
+                    <td class="fw-medium text-muted">{{ p.nome_mes }} {{ p.ano }}</td>
+                    <td><span class="badge bg-primary bg-opacity-75">Projetado</span></td>
+                    <td class="text-end fw-semibold text-primary">{{ p.saldo_fim | brl }}</td>
+                    <td class="text-end text-muted small">{{ p.aporte | brl }}</td>
+                    <td class="text-end text-success small">{{ p.rendimento | brl }}</td>
+                    <td class="text-end text-success fw-semibold small">
+                        +{{ (p.rendimento + p.aporte) | brl }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="table-dark">
+                    <td colspan="2" class="fw-bold">Total projetado ({{ param.meses_projecao }} meses)</td>
+                    <td class="text-end fw-bold">
+                        {{ projecoes[-1].saldo_fim | brl if projecoes else '—' }}
+                    </td>
+                    <td class="text-end fw-bold">
+                        {{ (projecoes | sum(attribute='aporte')) | brl if projecoes else '—' }}
+                    </td>
+                    <td class="text-end fw-bold text-success">
+                        {{ (projecoes | sum(attribute='rendimento')) | brl if projecoes else '—' }}
+                    </td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+{# ── Vencimentos próximos ───────────────────────────────────────────────── #}
+<h6 class="text-uppercase text-muted fw-semibold mb-3" style="font-size:.72rem;letter-spacing:.08em;">
+    Vencimentos nos próximos 12 meses
+</h6>
+{% if vencimentos %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Vencimento</th>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>Instituição</th>
+                    <th class="text-end">Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in vencimentos %}
+                <tr>
+                    <td>
+                        <span class="badge {% if (inv.vencimento - hoje).days <= 30 %}bg-danger{% elif (inv.vencimento - hoje).days <= 90 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {{ inv.vencimento.strftime('%d/%m/%Y') }}
+                        </span>
+                    </td>
+                    <td>{{ inv.nome }}</td>
+                    <td><span class="badge bg-secondary bg-opacity-75 fw-normal">{{ inv.tipo }}</span></td>
+                    <td>{{ inv.instituicao.nome }}</td>
+                    <td class="text-end fw-semibold">{{ inv.valor | brl }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center text-muted py-4">
+        <i class="bi bi-calendar-check fs-2 opacity-25 d-block mb-2"></i>
+        Nenhum investimento com vencimento nos próximos 12 meses.
+    </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function preencherAporte(valor) {
+    const input = document.getElementById('aporte_mensal_input');
+    if (!input) return;
+    // Formata com 2 casas decimais no padrão que o Flask-WTF espera (ponto decimal)
+    input.value = valor.toFixed(2);
+    input.focus();
+    input.classList.add('border-primary');
+    setTimeout(() => input.classList.remove('border-primary'), 1500);
+}
+</script>
+{% endblock %}

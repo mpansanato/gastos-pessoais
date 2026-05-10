@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Resultado da Importação — Gastos Pessoais{% endblock %}
+{% block page_title %}Resultado da Importação{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+
+        {# ── Resumo ──────────────────────────────────────────────────────── #}
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card h-100 {% if r.gastos_importados > 0 %}border-success border-opacity-50{% endif %}">
+                    <div class="card-body p-3 text-center">
+                        <div class="fw-bold fs-2 text-success">{{ r.gastos_importados }}</div>
+                        <div class="text-muted small">gastos importados</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card h-100">
+                    <div class="card-body p-3 text-center">
+                        <div class="fw-bold fs-2 text-muted">{{ r.gastos_pulados }}</div>
+                        <div class="text-muted small">gastos pulados (já existiam)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card h-100 {% if r.inv_importados > 0 %}border-primary border-opacity-50{% endif %}">
+                    <div class="card-body p-3 text-center">
+                        <div class="fw-bold fs-2 text-primary">{{ r.inv_importados }}</div>
+                        <div class="text-muted small">investimentos importados</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card h-100">
+                    <div class="card-body p-3 text-center">
+                        <div class="fw-bold fs-2 text-muted">{{ r.inv_pulados }}</div>
+                        <div class="text-muted small">investimentos pulados</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ── Meses importados ────────────────────────────────────────────── #}
+        {% if r.meses %}
+        <div class="card mb-3 border-success border-opacity-50">
+            <div class="card-body p-3">
+                <div class="fw-semibold small text-success mb-2">
+                    <i class="bi bi-check-circle-fill me-1"></i>Meses de gastos importados:
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for mes in r.meses %}
+                    <span class="badge bg-success fw-normal">{{ mes }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Avisos ──────────────────────────────────────────────────────── #}
+        {% if r.avisos %}
+        <div class="card mb-3 border-warning border-opacity-50">
+            <div class="card-header bg-warning bg-opacity-10 border-bottom py-2">
+                <span class="fw-semibold small">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                    Avisos ({{ r.avisos | length }})
+                </span>
+            </div>
+            <div class="card-body p-3">
+                <ul class="list-unstyled mb-0 small">
+                    {% for aviso in r.avisos %}
+                    <li class="py-1 border-bottom">
+                        <i class="bi bi-dash text-warning me-1"></i>{{ aviso }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Erros ───────────────────────────────────────────────────────── #}
+        {% if r.erros %}
+        <div class="card mb-3 border-danger border-opacity-50">
+            <div class="card-header bg-danger bg-opacity-10 border-bottom py-2">
+                <span class="fw-semibold small text-danger">
+                    <i class="bi bi-x-circle-fill me-1"></i>Erros ({{ r.erros | length }})
+                </span>
+            </div>
+            <div class="card-body p-3">
+                <ul class="list-unstyled mb-0 small">
+                    {% for erro in r.erros %}
+                    <li class="py-1 text-danger">{{ erro }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Próximos passos ─────────────────────────────────────────────── #}
+        {% if r.gastos_importados > 0 or r.inv_importados > 0 %}
+        <div class="card border-0 bg-light mb-4">
+            <div class="card-body p-3 small">
+                <strong><i class="bi bi-arrow-right-circle me-1 text-primary"></i>Próximos passos sugeridos:</strong>
+                <ul class="mb-0 mt-1 ps-3">
+                    {% if r.gastos_importados > 0 %}
+                    <li>Revise as <strong>categorias</strong> dos gastos importados em Gastos Mensais</li>
+                    <li>Configure o <strong>salário</strong> para os meses importados</li>
+                    {% endif %}
+                    {% if r.inv_importados > 0 %}
+                    <li>Edite os investimentos importados para adicionar <strong>emissor</strong> e <strong>risco</strong></li>
+                    <li>Acesse o <strong>Painel de Risco</strong> para a análise FGC</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Ações ───────────────────────────────────────────────────────── #}
+        <div class="d-flex gap-2 flex-wrap">
+            {% if r.gastos_importados > 0 %}
+            <a href="{{ url_for('gastos.index') }}" class="btn btn-success">
+                <i class="bi bi-receipt me-1"></i>Ver Gastos Mensais
+            </a>
+            {% endif %}
+            {% if r.inv_importados > 0 %}
+            <a href="{{ url_for('investimentos.index') }}" class="btn btn-primary">
+                <i class="bi bi-graph-up-arrow me-1"></i>Ver Investimentos
+            </a>
+            {% endif %}
+            <a href="{{ url_for('dados.importar') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-repeat me-1"></i>Importar novamente
+            </a>
+            <a href="{{ url_for('dados.index') }}" class="btn btn-outline-secondary">
+                Voltar
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

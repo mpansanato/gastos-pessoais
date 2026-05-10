@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Importar Excel — Gastos Pessoais{% endblock %}
+{% block page_title %}Importar do Excel{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+
+        <div class="alert alert-info border-0 mb-4 d-flex gap-2 align-items-start">
+            <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+            <div class="small">
+                O importador lê as abas <strong>Gastos</strong> e <strong>Resumo</strong> da sua planilha.
+                Itens já existentes no banco são pulados automaticamente (não há duplicatas).
+                Após importar, revise as <strong>categorias</strong> dos gastos e o <strong>emissor/risco</strong>
+                dos investimentos.
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="bi bi-file-earmark-arrow-up me-2 text-primary"></i>Selecionar arquivo
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('dados.importar') }}"
+                      enctype="multipart/form-data" novalidate>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    {# Arquivo #}
+                    <div class="mb-4">
+                        <label class="form-label fw-medium">Arquivo Excel (.xlsx) *</label>
+                        <input type="file" name="arquivo" class="form-control" accept=".xlsx" required>
+                        <div class="form-text text-muted">
+                            Sua planilha com as abas <strong>Gastos</strong>, <strong>Investimentos</strong>
+                            e <strong>Resumo</strong>.
+                        </div>
+                    </div>
+
+                    {# O que importar #}
+                    <div class="mb-4">
+                        <label class="form-label fw-medium">O que importar</label>
+                        <div class="d-flex flex-wrap gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="fazer_gastos" id="fazer_gastos" checked>
+                                <label class="form-check-label" for="fazer_gastos">
+                                    <i class="bi bi-receipt text-success me-1"></i>
+                                    <strong>Gastos Mensais</strong>
+                                    <small class="text-muted d-block">lê aba "Gastos"</small>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="fazer_inv" id="fazer_inv" checked>
+                                <label class="form-check-label" for="fazer_inv">
+                                    <i class="bi bi-graph-up-arrow text-primary me-1"></i>
+                                    <strong>Investimentos</strong>
+                                    <small class="text-muted d-block">lê aba "Resumo" (totais por instituição)</small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Ano dos gastos #}
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-medium">Ano dos Gastos *</label>
+                            <select name="ano" class="form-select">
+                                {% for a in anos %}
+                                <option value="{{ a }}" {% if a == now().year %}selected{% endif %}>{{ a }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text text-muted">
+                                Ano dos meses da planilha (Maio, Junho, Julho…)
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-medium">Mês de referência (Investimentos) *</label>
+                            <select name="ref_mes" class="form-select">
+                                {% set meses_nomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                                                      'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'] %}
+                                {% for i, nome in enumerate(meses_nomes) %}
+                                <option value="{{ i+1 }}" {% if i+1 == now().month %}selected{% endif %}>
+                                    {{ nome }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-medium">Ano de referência (Investimentos) *</label>
+                            <select name="ref_ano" class="form-select">
+                                {% for a in anos %}
+                                <option value="{{ a }}" {% if a == now().year %}selected{% endif %}>{{ a }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary fw-semibold py-2">
+                            <i class="bi bi-upload me-2"></i>Importar Planilha
+                        </button>
+                        <a href="{{ url_for('dados.index') }}" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 bg-light mt-3">
+            <div class="card-body p-3 small text-muted">
+                <strong><i class="bi bi-lightbulb me-1"></i>Mapeamento automático de categorias:</strong>
+                <div class="row mt-1">
+                    <div class="col-6">
+                        <ul class="mb-0 ps-3">
+                            <li>Visa, Master, Cartão → Cartão de Crédito</li>
+                            <li>Energia, Luz → Energia</li>
+                            <li>Escola, Colégio → Escola</li>
+                            <li>Seguro → Seguros</li>
+                        </ul>
+                    </div>
+                    <div class="col-6">
+                        <ul class="mb-0 ps-3">
+                            <li>Claro, Fibra, Netflix → Serviços</li>
+                            <li>Previdência, Investir → Investimentos</li>
+                            <li>Mercado, iFood → Alimentação</li>
+                            <li>Uber, Gasolina → Transporte</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

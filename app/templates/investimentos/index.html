@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}Investimentos — {{ nome_mes }} {{ ano }}{% endblock %}
+{% block page_title %}Investimentos{% endblock %}
+
+{% block content %}
+
+{# ── Navegação de meses ─────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <a href="{{ url_for('investimentos.por_mes', ano=ano_ant, mes=mes_ant) }}"
+       class="btn btn-outline-secondary btn-sm px-3">
+        <i class="bi bi-chevron-left"></i>
+    </a>
+    <div class="text-center">
+        <h5 class="mb-0 fw-bold">{{ nome_mes }} {{ ano }}</h5>
+        <small class="text-muted">
+            <a href="{{ url_for('investimentos.instituicoes') }}" class="text-muted text-decoration-none">
+                <i class="bi bi-bank me-1"></i>Gerenciar Instituições
+            </a>
+        </small>
+    </div>
+    <a href="{{ url_for('investimentos.por_mes', ano=ano_prox, mes=mes_prox) }}"
+       class="btn btn-outline-secondary btn-sm px-3">
+        <i class="bi bi-chevron-right"></i>
+    </a>
+</div>
+
+{# ── Cards de resumo ────────────────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="stat-icon bg-success bg-opacity-10 text-success" style="width:36px;height:36px;font-size:1rem;">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <span class="text-muted small">Total Investido</span>
+                </div>
+                <div class="fw-bold fs-5 text-success">{{ total_geral | brl }}</div>
+                <small class="text-muted">referência: {{ nome_mes }} {{ ano }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary" style="width:36px;height:36px;font-size:1rem;">
+                        <i class="bi bi-collection"></i>
+                    </div>
+                    <span class="text-muted small">Investimentos</span>
+                </div>
+                <div class="fw-bold fs-5">{{ qtd }}</div>
+                <small class="text-muted">lançamentos</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="stat-icon bg-info bg-opacity-10 text-info" style="width:36px;height:36px;font-size:1rem;">
+                        <i class="bi bi-bank"></i>
+                    </div>
+                    <span class="text-muted small">Instituições</span>
+                </div>
+                <div class="fw-bold fs-5">{{ por_inst | length }}</div>
+                <small class="text-muted">com posições</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Barra de ações ─────────────────────────────────────────────────────── #}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem;letter-spacing:.08em;">
+        Carteira
+    </h6>
+    {% if instituicoes %}
+    <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalNovoInv">
+        <i class="bi bi-plus-lg me-1"></i>Adicionar Investimento
+    </button>
+    {% endif %}
+</div>
+
+{# ── Tabela ─────────────────────────────────────────────────────────────── #}
+{% if not instituicoes %}
+<div class="alert alert-warning border-0">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Crie instituições antes de adicionar investimentos.
+    <a href="{{ url_for('investimentos.instituicoes') }}" class="alert-link">Gerenciar Instituições</a>
+</div>
+
+{% elif not por_inst %}
+<div class="card">
+    <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-graph-up-arrow fs-1 d-block mb-3 opacity-25"></i>
+        <p class="mb-1">Nenhum investimento lançado para <strong>{{ nome_mes }} {{ ano }}</strong>.</p>
+        <button class="btn btn-sm btn-success mt-2" data-bs-toggle="modal" data-bs-target="#modalNovoInv">
+            <i class="bi bi-plus-lg me-1"></i>Adicionar primeiro investimento
+        </button>
+    </div>
+</div>
+
+{% else %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nome / Descrição</th>
+                    <th>Tipo</th>
+                    <th>Vencimento</th>
+                    <th class="text-end" style="min-width:130px">Valor</th>
+                    <th class="text-end" style="min-width:70px">%</th>
+                    <th style="width:80px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inst, dados in por_inst.items() %}
+
+                {# Linha de instituição #}
+                <tr style="background:#f8f9fa;">
+                    <td colspan="3" class="fw-semibold py-2">
+                        <span class="badge me-2" style="background-color:{{ inst.cor }};">
+                            <i class="bi bi-bank"></i>
+                        </span>
+                        {{ inst.nome }}
+                    </td>
+                    <td class="text-end fw-semibold">{{ dados.subtotal | brl }}</td>
+                    <td class="text-end text-muted small">{{ '%.1f'|format(dados.percentual) }}%</td>
+                    <td></td>
+                </tr>
+
+                {# Investimentos da instituição #}
+                {% for inv in dados.lancamentos %}
+                <tr>
+                    <td>
+                        <span>{{ inv.nome }}</span>
+                        {% if inv.observacao %}
+                            <small class="text-muted d-block">{{ inv.observacao }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary bg-opacity-75 fw-normal">{{ inv.tipo }}</span>
+                        <span class="badge ms-1 fw-normal
+                            {% if inv.risco == 'alto' %}bg-danger
+                            {% elif inv.risco == 'medio' %}bg-warning text-dark
+                            {% else %}bg-success{% endif %}">
+                            {{ {'baixo':'Baixo','medio':'Médio','alto':'Alto'}[inv.risco] }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if inv.vencimento %}
+                            <span class="small">{{ inv.vencimento.strftime('%d/%m/%Y') }}</span>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end fw-semibold">{{ inv.valor | brl }}</td>
+                    <td class="text-end text-muted small">
+                        {{ '%.1f'|format(inv.valor|float / total_geral * 100 if total_geral else 0) }}%
+                    </td>
+                    <td class="text-end">
+                        <a href="{{ url_for('investimentos.editar', id=inv.id) }}"
+                           class="btn btn-sm btn-outline-secondary py-0 px-2 me-1" title="Editar">
+                            <i class="bi bi-pencil" style="font-size:.8rem;"></i>
+                        </a>
+                        <form method="POST" action="{{ url_for('investimentos.excluir', id=inv.id) }}"
+                              class="d-inline"
+                              onsubmit="return confirm('Excluir {{ inv.nome }}?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Excluir">
+                                <i class="bi bi-trash" style="font-size:.8rem;"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="table-dark">
+                    <td colspan="3" class="fw-bold">Total Geral</td>
+                    <td class="text-end fw-bold">{{ total_geral | brl }}</td>
+                    <td class="text-end fw-bold">100%</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# ── Modal: Novo Investimento ───────────────────────────────────────────── #}
+{% if instituicoes %}
+<div class="modal fade" id="modalNovoInv" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold">
+                    <i class="bi bi-plus-circle text-success me-2"></i>Novo Investimento — {{ nome_mes }} {{ ano }}
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('investimentos.novo', ano=ano, mes=mes) }}" novalidate>
+                {{ form.hidden_tag() }}
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium small">Nome / Descrição *</label>
+                        {{ form.nome(class="form-control", placeholder="Ex: CDB Itaú 120% CDI") }}
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label fw-medium small">Tipo *</label>
+                            {{ form.tipo(class="form-select") }}
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-medium small">Corretora *</label>
+                            {{ form.instituicao_id(class="form-select") }}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label fw-medium small">
+                                Emissor
+                                <span class="text-muted fw-normal">(banco/empresa emissora)</span>
+                            </label>
+                            {{ form.emissor(class="form-control form-control-sm", placeholder="Ex: Banco Master, Banco Pan") }}
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-medium small">Risco do Emissor</label>
+                            {{ form.risco(class="form-select form-select-sm") }}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label fw-medium small">Valor (R$) *</label>
+                            {{ form.valor(class="form-control", placeholder="0,00") }}
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-medium small">Vencimento</label>
+                            {{ form.vencimento(class="form-control", type="date") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-medium small">Observação</label>
+                        {{ form.observacao(class="form-control form-control-sm", rows="2", placeholder="Opcional — ex: 120% CDI, liquidez diária") }}
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    {{ form.submit(class="btn btn-success btn-sm px-4") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

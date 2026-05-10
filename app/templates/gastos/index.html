@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+{% block title %}Gastos — {{ nome_mes }} {{ ano }}{% endblock %}
+{% block page_title %}Gastos Mensais{% endblock %}
+
+{% block content %}
+
+{# ── Navegação de meses ─────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <a href="{{ url_for('gastos.por_mes', ano=ano_ant, mes=mes_ant) }}"
+       class="btn btn-outline-secondary btn-sm px-3">
+        <i class="bi bi-chevron-left"></i>
+    </a>
+    <div class="text-center">
+        <h5 class="mb-0 fw-bold">{{ nome_mes }} {{ ano }}</h5>
+        <small class="text-muted">
+            <a href="{{ url_for('gastos.categorias') }}" class="text-muted text-decoration-none">
+                <i class="bi bi-tags me-1"></i>Gerenciar Categorias
+            </a>
+        </small>
+    </div>
+    <a href="{{ url_for('gastos.por_mes', ano=ano_prox, mes=mes_prox) }}"
+       class="btn btn-outline-secondary btn-sm px-3">
+        <i class="bi bi-chevron-right"></i>
+    </a>
+</div>
+
+{# ── Cards de resumo ────────────────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+
+    {# Entradas do Mês (Salário + Extras) #}
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary" style="width:36px;height:36px;font-size:1rem;">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div class="text-muted small d-flex align-items-center gap-1 flex-wrap">
+                        Entradas
+                        <button class="btn btn-link btn-sm p-0 text-muted" style="font-size:.72rem;"
+                                data-bs-toggle="collapse" data-bs-target="#entradasCollapse">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-link btn-sm p-0 text-success" style="font-size:.72rem;"
+                                data-bs-toggle="modal" data-bs-target="#modalNovaReceita" title="Adicionar receita extra">
+                            <i class="bi bi-plus-circle-fill"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="fw-bold fs-5 text-primary">{{ totais.total_entradas | brl }}</div>
+
+                {# Breakdown #}
+                <div class="mt-1" style="font-size:.75rem;">
+                    <div class="text-muted d-flex justify-content-between">
+                        <span>Salário</span>
+                        <span>{{ param.salario | brl }}</span>
+                    </div>
+                    {% for r in receitas_extras %}
+                    <div class="d-flex justify-content-between {% if r.eh_saque %}text-warning{% else %}text-success{% endif %}">
+                        <span>
+                            {% if r.eh_saque %}<i class="bi bi-arrow-down-circle me-1"></i>{% else %}+{% endif %}
+                            {{ r.tipo }}
+                        </span>
+                        <span class="d-flex align-items-center gap-1">
+                            {{ r.valor | brl }}
+                            <form method="POST" action="{{ url_for('gastos.excluir_receita', id=r.id) }}"
+                                  class="d-inline" onsubmit="return confirm('Remover {{ r.descricao }}?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-link btn-sm p-0 text-danger" style="font-size:.65rem;">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </form>
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {# Editar salário #}
+                <div class="collapse mt-2" id="entradasCollapse">
+                    <form method="POST" action="{{ url_for('gastos.atualizar_salario', ano=ano, mes=mes) }}" novalidate>
+                        {{ salario_form.hidden_tag() }}
+                        <div class="input-group input-group-sm">
+                            {{ salario_form.salario(class="form-control form-control-sm", placeholder="Salário") }}
+                            <button type="submit" class="btn btn-primary btn-sm">OK</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Total Previsto #}
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="stat-icon bg-secondary bg-opacity-10 text-secondary" style="width:36px;height:36px;font-size:1rem;">
+                        <i class="bi bi-list-check"></i>
+                    </div>
+                    <span class="text-muted small">Previsto</span>
+                </div>
+                <div class="fw-bold fs-5">{{ totais.total_previsto | brl }}</div>
+                <small class="text-muted">Parcial: <strong>{{ totais.parcial | brl }}</strong></small>
+            </div>
+        </div>
+    </div>
+
+    {# Total Pago #}
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="stat-icon bg-warning bg-opacity-10 text-warning" style="width:36px;height:36px;font-size:1rem;">
+                        <i class="bi bi-receipt-cutoff"></i>
+                    </div>
+                    <span class="text-muted small">Pago</span>
+                </div>
+                <div class="fw-bold fs-5">{{ totais.total_pago | brl }}</div>
+                <small class="text-muted">do previsto de {{ totais.total_previsto | brl }}</small>
+            </div>
+        </div>
+    </div>
+
+    {# Sobra #}
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="stat-icon {% if totais.sobra >= 0 %}bg-success bg-opacity-10 text-success{% else %}bg-danger bg-opacity-10 text-danger{% endif %}"
+                         style="width:36px;height:36px;font-size:1rem;">
+                        <i class="bi bi-piggy-bank"></i>
+                    </div>
+                    <span class="text-muted small">Sobra</span>
+                </div>
+                <div class="fw-bold fs-5 {% if totais.sobra < 0 %}text-danger{% else %}text-success{% endif %}">
+                    {{ totais.sobra | brl }}
+                </div>
+                <small class="text-muted">após pagamentos</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Alerta de saque de investimento ────────────────────────────────────── #}
+{% if saques %}
+<div class="alert alert-warning border-0 d-flex align-items-start gap-2 mb-3">
+    <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+    <div>
+        <strong>Saque de investimento registrado neste mês.</strong>
+        <ul class="mb-1 mt-1 ps-3 small">
+            {% for s in saques %}
+            <li>
+                <strong>{{ s.descricao }}</strong> — {{ s.valor | brl }}
+                {% if s.instituicao %} ({{ s.instituicao.nome }}){% endif %}
+                {% if s.observacao %} — {{ s.observacao }}{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        <span class="small">
+            <i class="bi bi-arrow-right-circle me-1"></i>
+            Verifique e atualize o saldo em
+            <a href="{{ url_for('investimentos.index') }}" class="alert-link">Investimentos</a>.
+        </span>
+    </div>
+</div>
+{% endif %}
+
+{# ── Barra de ações ─────────────────────────────────────────────────────── #}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem;letter-spacing:.08em;">
+        Lançamentos
+    </h6>
+    {% if categorias %}
+    <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalNovoGasto">
+        <i class="bi bi-plus-lg me-1"></i>Adicionar Gasto
+    </button>
+    {% endif %}
+</div>
+
+{# ── Tabela de gastos ───────────────────────────────────────────────────── #}
+{% if not categorias %}
+<div class="alert alert-warning border-0">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Crie categorias antes de adicionar gastos.
+    <a href="{{ url_for('gastos.categorias') }}" class="alert-link">Gerenciar Categorias</a>
+</div>
+
+{% elif not gastos_por_cat %}
+<div class="card">
+    <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-receipt fs-1 d-block mb-3 opacity-25"></i>
+        <p class="mb-1">Nenhum gasto lançado para <strong>{{ nome_mes }} {{ ano }}</strong>.</p>
+        <button class="btn btn-sm btn-success mt-2" data-bs-toggle="modal" data-bs-target="#modalNovoGasto">
+            <i class="bi bi-plus-lg me-1"></i>Adicionar primeiro gasto
+        </button>
+    </div>
+</div>
+
+{% else %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Descrição</th>
+                    <th class="text-end" style="min-width:120px">Previsto</th>
+                    <th class="text-end" style="min-width:120px">Pago</th>
+                    <th class="text-end" style="min-width:110px">Diferença</th>
+                    <th style="width:80px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat, dados in gastos_por_cat.items() %}
+
+                {# Linha de categoria #}
+                <tr style="background:#f8f9fa;">
+                    <td class="fw-semibold py-2">
+                        <span class="badge me-2" style="background-color:{{ cat.cor }};">
+                            {{ 'Fixo' if cat.tipo == 'fixo' else 'Variável' }}
+                        </span>
+                        {{ cat.nome }}
+                    </td>
+                    <td class="text-end text-muted small fw-semibold">{{ dados.subtotal_previsto | brl }}</td>
+                    <td class="text-end text-muted small fw-semibold">{{ dados.subtotal_pago | brl }}</td>
+                    <td colspan="2"></td>
+                </tr>
+
+                {# Itens de gasto #}
+                {% for gasto in dados.lancamentos %}
+                <tr>
+                    <td>
+                        <span>{{ gasto.descricao }}</span>
+                        {% if gasto.parcela_total %}
+                            <span class="badge bg-info bg-opacity-75 ms-1" style="font-size:.7rem;">
+                                {{ gasto.parcela_num }}/{{ gasto.parcela_total }}
+                            </span>
+                        {% endif %}
+                        {% if gasto.observacao %}
+                            <small class="text-muted d-block">{{ gasto.observacao }}</small>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ gasto.valor_previsto | brl }}</td>
+                    <td class="text-end">
+                        {% if gasto.valor_pago is not none %}
+                            {{ gasto.valor_pago | brl }}
+                        {% else %}
+                            <span class="text-muted fst-italic small">não pago</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if gasto.diferenca is not none %}
+                            <span class="{{ 'text-success' if gasto.diferenca <= 0 else 'text-danger' }} fw-semibold">
+                                {{ gasto.diferenca | brl }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="{{ url_for('gastos.editar', id=gasto.id) }}"
+                           class="btn btn-sm btn-outline-secondary py-0 px-2 me-1" title="Editar">
+                            <i class="bi bi-pencil" style="font-size:.8rem;"></i>
+                        </a>
+                        <form method="POST" action="{{ url_for('gastos.excluir', id=gasto.id) }}"
+                              class="d-inline"
+                              onsubmit="return confirm('Excluir {{ gasto.descricao }} (apenas esta parcela)?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Excluir esta parcela">
+                                <i class="bi bi-trash" style="font-size:.8rem;"></i>
+                            </button>
+                        </form>
+                        {% if gasto.parcela_grupo_id %}
+                        <form method="POST" action="{{ url_for('gastos.excluir_grupo', grupo_id=gasto.parcela_grupo_id) }}"
+                              class="d-inline"
+                              onsubmit="return confirm('Excluir TODAS as {{ gasto.parcela_total }} parcelas de \"{{ gasto.descricao }}\"?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Excluir todas as parcelas" style="font-size:.7rem;">
+                                <i class="bi bi-trash-fill" style="font-size:.75rem;"></i>×{{ gasto.parcela_total }}
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="table-dark">
+                    <td class="fw-bold">Total Geral</td>
+                    <td class="text-end fw-bold">{{ totais.total_previsto | brl }}</td>
+                    <td class="text-end fw-bold">{{ totais.total_pago | brl }}</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# ── Modal: Novo Gasto ──────────────────────────────────────────────────── #}
+{% if categorias %}
+<div class="modal fade" id="modalNovoGasto" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold">
+                    <i class="bi bi-plus-circle text-success me-2"></i>Novo Gasto — {{ nome_mes }} {{ ano }}
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('gastos.novo', ano=ano, mes=mes) }}" novalidate>
+                {{ gasto_form.hidden_tag() }}
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium small">Descrição *</label>
+                        {{ gasto_form.descricao(class="form-control", placeholder="Ex: Fatura Nubank") }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium small">Categoria *</label>
+                        {{ gasto_form.categoria_id(class="form-select") }}
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label fw-medium small">Valor Previsto *</label>
+                            {{ gasto_form.valor_previsto(class="form-control", placeholder="0,00") }}
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-medium small">Valor Pago</label>
+                            {{ gasto_form.valor_pago(class="form-control", placeholder="Vazio = não pago") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium small">
+                            Parcelas
+                            <span class="text-muted fw-normal" id="parcelasHint"></span>
+                        </label>
+                        {{ gasto_form.parcelas(class="form-select form-select-sm", id="parcelasSelect") }}
+                        <div class="form-text" id="parcelasInfo" style="display:none;">
+                            <i class="bi bi-info-circle me-1"></i>
+                            O valor pago acima será registrado apenas na 1ª parcela; as demais ficam como "não pagas".
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-medium small">Observação</label>
+                        {{ gasto_form.observacao(class="form-control form-control-sm", rows="2", placeholder="Opcional") }}
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    {{ gasto_form.submit(class="btn btn-success btn-sm px-4") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── Modal: Nova Receita Extra ──────────────────────────────────────────── #}
+<div class="modal fade" id="modalNovaReceita" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold">
+                    <i class="bi bi-plus-circle text-primary me-2"></i>Nova Receita — {{ nome_mes }} {{ ano }}
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('gastos.nova_receita', ano=ano, mes=mes) }}" novalidate>
+                {{ receita_form.hidden_tag() }}
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium small">Tipo *</label>
+                        {{ receita_form.tipo(class="form-select", id="tipoReceita") }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium small">
+                            Descrição <span class="text-muted fw-normal">(opcional)</span>
+                        </label>
+                        {{ receita_form.descricao(class="form-control", placeholder="Ex: Bônus anual 2026 — se vazio, usa o Tipo") }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium small">Valor (R$) *</label>
+                        {{ receita_form.valor(class="form-control", placeholder="0,00") }}
+                    </div>
+
+                    <div class="mb-3" id="campoInstituicao" style="display:none;">
+                        <label class="form-label fw-medium small">
+                            Instituição retirada
+                            <span class="text-muted fw-normal">(para atualizar o saldo depois)</span>
+                        </label>
+                        {{ receita_form.instituicao_id(class="form-select") }}
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-medium small">Observação</label>
+                        {{ receita_form.observacao(class="form-control form-control-sm", rows="2", placeholder="Opcional") }}
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    {{ receita_form.submit(class="btn btn-primary btn-sm px-4") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Mostrar/ocultar campo de instituição quando tipo == Saque de Investimento
+document.getElementById('tipoReceita')?.addEventListener('change', function () {
+    const campo = document.getElementById('campoInstituicao');
+    campo.style.display = this.value === 'Saque de Investimento' ? '' : 'none';
+});
+
+// Mostrar dica de parcelamento quando parcelas > 1
+document.getElementById('parcelasSelect')?.addEventListener('change', function () {
+    const info = document.getElementById('parcelasInfo');
+    const hint = document.getElementById('parcelasHint');
+    const n = parseInt(this.value, 10);
+    info.style.display = n > 1 ? '' : 'none';
+    hint.textContent = n > 1 ? `— lançará ${n} meses consecutivos` : '';
+});
+</script>
+{% endblock %}
