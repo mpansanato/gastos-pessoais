@@ -35,9 +35,17 @@
            class="nav-link {% if request.blueprint == 'gastos_fixos' %}active{% endif %}" style="padding-left:2.2rem;">
             <i class="bi bi-arrow-repeat"></i> Gastos Fixos
         </a>
+        <a href="{{ url_for('entradas_fixas.index') }}"
+           class="nav-link {% if request.blueprint == 'entradas_fixas' %}active{% endif %}" style="padding-left:2.2rem;">
+            <i class="bi bi-arrow-repeat"></i> Entradas Fixas
+        </a>
         <a href="{{ url_for('investimentos.index') }}"
-           class="nav-link {% if request.blueprint == 'investimentos' and request.endpoint != 'investimentos.painel_risco' %}active{% endif %}">
+           class="nav-link {% if request.blueprint == 'investimentos' and request.endpoint not in ['investimentos.painel_risco','investimentos.carteira','investimentos.editar_carteira'] %}active{% endif %}">
             <i class="bi bi-graph-up-arrow"></i> Investimentos
+        </a>
+        <a href="{{ url_for('investimentos.carteira') }}"
+           class="nav-link {% if request.endpoint in ['investimentos.carteira','investimentos.editar_carteira'] %}active{% endif %}" style="padding-left:2.2rem;">
+            <i class="bi bi-briefcase"></i> Carteira
         </a>
         <a href="{{ url_for('investimentos.painel_risco') }}"
            class="nav-link {% if request.endpoint == 'investimentos.painel_risco' %}active{% endif %}" style="padding-left:2.2rem;">

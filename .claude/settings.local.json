@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tasklist)",
+      "Bash(tasklist.exe)",
+      "Bash(cmd /c \"taskkill /F /T /PID 29540\")",
+      "Bash(netstat -ano)",
+      "Bash(cmd /c \"wmic process where \\\\\"ProcessId=29540\\\\\" get ProcessId,CommandLine,ParentProcessId\")",
+      "Bash(cmd /c \"wmic process where \\\\\"ProcessId=21636\\\\\" get ProcessId,CommandLine,ParentProcessId\")",
+      "Bash(mkdir -p \"c:/Users/mpans/OneDrive/Documentos/GitHub/gastos-pessoais/logs\")",
+      "Bash(venv/Scripts/python run.py)",
+      "Bash(cmd /c \"taskkill /F /PID 14936\")",
+      "Bash(cmd /c \"taskkill /F /PID 14936 & taskkill /F /PID 24760\")",
+      "Bash(echo \"exit:$?\")",
+      "Bash(venv/Scripts/python -c \"import os, signal; [os.kill\\(p, signal.SIGTERM\\) for p in [14936, 24760]]\")",
+      "Bash(awk '{print $5}')",
+      "Bash(venv/Scripts/python -c ' *)",
+      "Bash(venv/Scripts/python limpar_investimentos.py)"
+    ]
+  }
+}

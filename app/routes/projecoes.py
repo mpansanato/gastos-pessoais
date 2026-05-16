@@ -26,11 +26,6 @@ MESES = [
 # ── Formulário ─────────────────────────────────────────────────────────────────
 
 class ProjecaoForm(FlaskForm):
-    rendimento_mensal_pct = DecimalField(
-        'Rendimento mensal estimado (%)',
-        validators=[DataRequired(), NumberRange(min=0, max=100)],
-        places=4,
-    )
     aporte_mensal = DecimalField(
         'Aporte mensal planejado (R$)',
         validators=[DataRequired(), NumberRange(min=0)],
@@ -148,7 +143,6 @@ def index():
     form = ProjecaoForm(obj=param)
 
     if form.validate_on_submit():
-        param.rendimento_mensal_pct = form.rendimento_mensal_pct.data
         param.aporte_mensal = form.aporte_mensal.data
         param.meses_projecao = form.meses_projecao.data
         db.session.commit()

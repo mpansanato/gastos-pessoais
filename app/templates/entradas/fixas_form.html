@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Editar Entrada Fixa — Gastos Pessoais{% endblock %}
+{% block page_title %}Editar Entrada Fixa{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="alert alert-warning border-0 d-flex gap-2 align-items-start mb-3">
+            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+            <div class="small">
+                As alterações serão aplicadas <strong>apenas nos meses futuros</strong>
+                (a partir do próximo mês). O mês atual <strong>não será tocado</strong>.
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center gap-2">
+                <i class="bi bi-pencil-square text-success"></i>
+                <h6 class="mb-0 fw-semibold">Editar: {{ entrada.descricao }}</h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('entradas_fixas.editar', id=entrada.id) }}" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Descrição *</label>
+                        {{ form.descricao(class="form-control" + (" is-invalid" if form.descricao.errors else "")) }}
+                        {% for e in form.descricao.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Valor Mensal *</label>
+                        {{ form.valor(class="form-control" + (" is-invalid" if form.valor.errors else ""), placeholder="0,00") }}
+                        {% for e in form.valor.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-medium">Observação</label>
+                        {{ form.observacao(class="form-control", rows="2", placeholder="Opcional") }}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        {{ form.submit(class="btn btn-success fw-semibold") }}
+                        <a href="{{ url_for('entradas_fixas.index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

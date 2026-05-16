@@ -13,9 +13,23 @@ class Investimento(db.Model):
     ano = db.Column(db.Integer, nullable=False)
     vencimento = db.Column(db.Date, nullable=True)
     risco = db.Column(db.String(10), nullable=False, default='baixo')  # baixo | medio | alto
-    emissor = db.Column(db.String(200), nullable=True)  # quem emitiu: Banco Master, Banco Pan…
-    fundo = db.Column(db.String(200), nullable=True)    # nome do fundo (FII, multimercado…)
+    emissor = db.Column(db.String(200), nullable=True)
+    fundo = db.Column(db.String(200), nullable=True)
     observacao = db.Column(db.String(300), nullable=True)
+
+    # Campos de rolling/confirmação (nullable = legado sem base)
+    investimento_base_id = db.Column(
+        db.Integer, db.ForeignKey('investimentos_base.id'), nullable=True
+    )
+    confirmado = db.Column(db.Boolean, nullable=False, default=False)
+    rendimento_real = db.Column(db.Numeric(12, 2), nullable=True)
+    rendimento_projetado = db.Column(db.Numeric(12, 2), nullable=True)
+    retirada = db.Column(db.Numeric(12, 2), nullable=True)
+
+    base = db.relationship(
+        'InvestimentoBase', back_populates='saldos',
+        foreign_keys=[investimento_base_id],
+    )
 
     def __repr__(self) -> str:
         return f'<Investimento {self.nome}>'

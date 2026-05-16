@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Editar Ativo — Gastos Pessoais{% endblock %}
+{% block page_title %}Editar Ativo{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="alert alert-info border-0 d-flex gap-2 align-items-start mb-3">
+            <i class="bi bi-info-circle-fill flex-shrink-0"></i>
+            <div class="small">
+                Editar as informações do ativo <strong>não altera os saldos já lançados</strong>.
+                Para atualizar o saldo, use a confirmação mensal em <em>Investimentos Mensais</em>.
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center gap-2">
+                <i class="bi bi-pencil-square text-success"></i>
+                <h6 class="mb-0 fw-semibold">Editar: {{ base.nome }}</h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('investimentos.editar_carteira', id=base.id) }}" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Nome / Descrição *</label>
+                        {{ form.nome(class="form-control" + (" is-invalid" if form.nome.errors else "")) }}
+                        {% for e in form.nome.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label fw-medium">Tipo *</label>
+                            {{ form.tipo(class="form-select") }}
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-medium">Corretora *</label>
+                            {{ form.instituicao_id(class="form-select") }}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label fw-medium">Emissor</label>
+                            {{ form.emissor(class="form-control", placeholder="Banco/empresa emissora") }}
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-medium">Risco</label>
+                            {{ form.risco(class="form-select") }}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label fw-medium">Fundo / Produto</label>
+                            {{ form.fundo(class="form-control", placeholder="Ex: FII XPML11") }}
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-medium">Vencimento</label>
+                            {{ form.vencimento(class="form-control", type="date") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-medium">Observação</label>
+                        {{ form.observacao(class="form-control", rows="2", placeholder="Opcional") }}
+                    </div>
+
+                    {# ── Correção de saldo ─────────────────────────────── #}
+                    <hr class="my-3">
+                    <div class="mb-4">
+                        <label class="form-label fw-medium">
+                            Corrigir Saldo (R$)
+                            <span class="text-muted fw-normal small">— opcional</span>
+                        </label>
+                        {{ form.valor_atual(class="form-control", placeholder="Deixe vazio para não alterar") }}
+                        <div class="form-text">
+                            {% if ultimo %}
+                            Saldo confirmado atual:
+                            <strong>{{ ultimo.valor | brl }}</strong>
+                            ({{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][ultimo.mes-1] }}/{{ ultimo.ano }}).
+                            Preencha apenas se precisar corrigir um valor lançado errado.
+                            {% else %}
+                            Nenhum saldo confirmado encontrado.
+                            {% endif %}
+                            As projeções futuras serão recalculadas automaticamente.
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        {{ form.submit(class="btn btn-success fw-semibold") }}
+                        <a href="{{ url_for('investimentos.carteira') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

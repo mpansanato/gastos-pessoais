@@ -55,6 +55,12 @@
                         <span>Salário</span>
                         <span>{{ param.salario | brl }}</span>
                     </div>
+                    {% for r in receitas_fixas %}
+                    <div class="d-flex justify-content-between text-primary">
+                        <span><i class="bi bi-arrow-repeat me-1" style="font-size:.7rem;"></i>{{ r.descricao }}</span>
+                        <span>{{ r.valor | brl }}</span>
+                    </div>
+                    {% endfor %}
                     {% for r in receitas_extras %}
                     <div class="d-flex justify-content-between {% if r.eh_saque %}text-warning{% else %}text-success{% endif %}">
                         <span>

@@ -14,6 +14,7 @@ from app.models.gasto import Gasto
 from app.models.instituicao import Instituicao
 from app.models.parametro_mensal import ParametroMensal
 from app.models.receita_extra import ReceitaExtra
+from app.models.receita_fixa import ReceitaFixa
 
 gastos_bp = Blueprint('gastos', __name__, url_prefix='/gastos')
 
@@ -80,17 +81,20 @@ def _get_or_create_parametro(mes: int, ano: int) -> ParametroMensal:
     return param
 
 
-def _calcular_totais(gastos: list, salario: Decimal, receitas_extras: list = None) -> dict:
+def _calcular_totais(gastos: list, salario: Decimal, receitas_extras: list = None, receitas_fixas: list = None) -> dict:
     receitas_extras = receitas_extras or []
+    receitas_fixas = receitas_fixas or []
     total_previsto = sum(float(g.valor_previsto) for g in gastos)
     total_pago = sum(float(g.valor_pago) for g in gastos if g.valor_pago is not None)
     sal = float(salario)
     total_extras = sum(float(r.valor) for r in receitas_extras)
-    total_entradas = sal + total_extras
+    total_fixas = sum(float(r.valor) for r in receitas_fixas)
+    total_entradas = sal + total_extras + total_fixas
     return {
         'total_previsto': total_previsto,
         'total_pago': total_pago,
         'total_extras': total_extras,
+        'total_fixas': total_fixas,
         'total_entradas': total_entradas,
         'parcial': total_entradas - total_previsto,
         'sobra': total_entradas - total_pago,
@@ -119,9 +123,11 @@ def _avancar_mes(mes: int, ano: int, n: int = 1):
 @gastos_bp.route('/')
 @login_required
 def index():
-    # Rolling automático: garante 12 meses à frente para cada gasto fixo ativo
+    # Rolling automático: garante 12 meses à frente para cada fixo ativo
     from app.routes.gastos_fixos import rolling_forward
+    from app.routes.entradas_fixas import rolling_forward as rolling_entradas
     rolling_forward()
+    rolling_entradas()
     hoje = datetime.today()
     return redirect(url_for('gastos.por_mes', ano=hoje.year, mes=hoje.month))
 
@@ -150,7 +156,13 @@ def por_mes(ano: int, mes: int):
         .order_by(ReceitaExtra.tipo, ReceitaExtra.descricao)
     ).all()
 
-    totais = _calcular_totais(todos_gastos, param.salario, receitas_extras)
+    receitas_fixas = db.session.scalars(
+        db.select(ReceitaFixa)
+        .where(ReceitaFixa.mes == mes, ReceitaFixa.ano == ano)
+        .order_by(ReceitaFixa.descricao)
+    ).all()
+
+    totais = _calcular_totais(todos_gastos, param.salario, receitas_extras, receitas_fixas)
 
     gastos_por_cat = {}
     for cat in categorias:
@@ -182,6 +194,7 @@ def por_mes(ano: int, mes: int):
         totais=totais,
         param=param,
         receitas_extras=receitas_extras,
+        receitas_fixas=receitas_fixas,
         saques=saques,
         salario_form=salario_form,
         gasto_form=gasto_form,

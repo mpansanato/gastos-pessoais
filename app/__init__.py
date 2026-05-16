@@ -47,6 +47,24 @@ def _migrate_investimentos():
             conn.execute(text('ALTER TABLE investimentos ADD COLUMN emissor VARCHAR(200)'))
         if 'fundo' not in cols:
             conn.execute(text('ALTER TABLE investimentos ADD COLUMN fundo VARCHAR(200)'))
+        if 'investimento_base_id' not in cols:
+            conn.execute(text('ALTER TABLE investimentos ADD COLUMN investimento_base_id INTEGER REFERENCES investimentos_base(id)'))
+        if 'confirmado' not in cols:
+            conn.execute(text('ALTER TABLE investimentos ADD COLUMN confirmado BOOLEAN NOT NULL DEFAULT 1'))
+        if 'rendimento_real' not in cols:
+            conn.execute(text('ALTER TABLE investimentos ADD COLUMN rendimento_real NUMERIC(12,2)'))
+        if 'rendimento_projetado' not in cols:
+            conn.execute(text('ALTER TABLE investimentos ADD COLUMN rendimento_projetado NUMERIC(12,2)'))
+        if 'retirada' not in cols:
+            conn.execute(text('ALTER TABLE investimentos ADD COLUMN retirada NUMERIC(12,2)'))
+        conn.commit()
+
+    with db.engine.connect() as conn:
+        cols = [r[1] for r in conn.execute(text('PRAGMA table_info(retiradas_investimentos)'))]
+        if 'receita_extra_id' not in cols:
+            conn.execute(text(
+                'ALTER TABLE retiradas_investimentos ADD COLUMN receita_extra_id INTEGER REFERENCES receitas_extras(id)'
+            ))
         conn.commit()
 
 
@@ -80,12 +98,33 @@ def _seed_categorias():
             ('Alimentação',       'variavel', '#0d6efd', 7),
             ('Transporte',        'variavel', '#6c757d', 8),
             ('Lazer',             'variavel', '#20c997', 9),
+            ('Telefonia',         'fixo',    '#17a2b8', 10),
+            ('Previdência',       'fixo',    '#e83e8c', 11),
+            ('Mesada',            'fixo',    '#6610f2', 12),
+            ('Gastos Gerais',     'variavel', '#adb5bd', 13),
         ]
         for nome, tipo, cor, ordem in defaults:
             db.session.add(__import__('app.models.categoria', fromlist=['Categoria']).Categoria(
                 nome=nome, tipo=tipo, cor=cor, ordem=ordem
             ))
         db.session.commit()
+
+
+def _seed_categorias_extras():
+    from app.models.categoria import Categoria
+    novas = [
+        ('Telefonia',     'fixo',    '#17a2b8', 10),
+        ('Previdência',   'fixo',    '#e83e8c', 11),
+        ('Mesada',        'fixo',    '#6610f2', 12),
+        ('Gastos Gerais', 'variavel', '#adb5bd', 13),
+    ]
+    nomes_existentes = {
+        r[0] for r in db.session.execute(db.select(Categoria.nome)).all()
+    }
+    for nome, tipo, cor, ordem in novas:
+        if nome not in nomes_existentes:
+            db.session.add(Categoria(nome=nome, tipo=tipo, cor=cor, ordem=ordem))
+    db.session.commit()
 
 
 def create_app(config_class=Config):
@@ -114,6 +153,7 @@ def create_app(config_class=Config):
     from app.routes.main import main_bp
     from app.routes.gastos import gastos_bp
     from app.routes.gastos_fixos import gastos_fixos_bp
+    from app.routes.entradas_fixas import entradas_fixas_bp
     from app.routes.investimentos import investimentos_bp
     from app.routes.projecoes import projecoes_bp
     from app.routes.dados import dados_bp
@@ -121,6 +161,7 @@ def create_app(config_class=Config):
     app.register_blueprint(main_bp)
     app.register_blueprint(gastos_bp)
     app.register_blueprint(gastos_fixos_bp)
+    app.register_blueprint(entradas_fixas_bp)
     app.register_blueprint(investimentos_bp)
     app.register_blueprint(projecoes_bp)
     app.register_blueprint(dados_bp)
@@ -132,6 +173,7 @@ def create_app(config_class=Config):
         _migrate_gastos()
         _migrate_investimentos()
         _seed_categorias()
+        _seed_categorias_extras()
         _seed_instituicoes()
 
     return app

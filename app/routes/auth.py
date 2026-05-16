@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Length, EqualTo
 from app.extensions import db
 from app.models.usuario import Usuario
@@ -12,7 +12,6 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 class LoginForm(FlaskForm):
     username = StringField('Usuário', validators=[DataRequired(), Length(min=3, max=80)])
     password = PasswordField('Senha', validators=[DataRequired()])
-    remember_me = BooleanField('Lembrar-me')
     submit = SubmitField('Entrar')
 
 
@@ -27,7 +26,8 @@ def login():
             db.select(Usuario).where(Usuario.username == form.username.data)
         )
         if usuario and usuario.check_senha(form.password.data):
-            login_user(usuario, remember=form.remember_me.data)
+            session.permanent = True  # aplica PERMANENT_SESSION_LIFETIME (8h)
+            login_user(usuario, remember=False)
             next_page = request.args.get('next')
             if next_page and not next_page.startswith('/'):
                 next_page = None
