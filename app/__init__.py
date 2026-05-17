@@ -68,6 +68,15 @@ def _migrate_investimentos():
         conn.commit()
 
 
+def _migrate_categorias():
+    """Adiciona colunas novas à tabela categorias sem perder dados existentes."""
+    with db.engine.connect() as conn:
+        cols = [r[1] for r in conn.execute(text('PRAGMA table_info(categorias)'))]
+        if 'limite_mensal' not in cols:
+            conn.execute(text('ALTER TABLE categorias ADD COLUMN limite_mensal NUMERIC(12,2)'))
+        conn.commit()
+
+
 def _seed_instituicoes():
     from app.models.instituicao import Instituicao
     if db.session.scalar(db.select(db.func.count()).select_from(Instituicao)) == 0:
@@ -172,6 +181,7 @@ def create_app(config_class=Config):
         db.create_all()   # cria receitas_extras automaticamente (nova tabela)
         _migrate_gastos()
         _migrate_investimentos()
+        _migrate_categorias()
         _seed_categorias()
         _seed_categorias_extras()
         _seed_instituicoes()

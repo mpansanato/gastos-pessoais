@@ -49,6 +49,11 @@ class CategoriaForm(FlaskForm):
     nome = StringField('Nome', validators=[DataRequired(), Length(max=80)])
     tipo = SelectField('Tipo', choices=[('fixo', 'Fixo'), ('variavel', 'Variável')])
     cor = SelectField('Cor', choices=CORES)
+    limite_mensal = DecimalField(
+        'Limite Mensal (R$)',
+        validators=[Optional(), NumberRange(min=0.01)],
+        places=2
+    )
     submit = SubmitField('Criar Categoria')
 
 
@@ -398,10 +403,38 @@ def nova_categoria():
         if db.session.scalar(db.select(Categoria).where(Categoria.nome == form.nome.data)):
             flash('Já existe uma categoria com esse nome.', 'danger')
         else:
-            cat = Categoria(nome=form.nome.data, tipo=form.tipo.data, cor=form.cor.data)
+            cat = Categoria(
+                nome=form.nome.data,
+                tipo=form.tipo.data,
+                cor=form.cor.data,
+                limite_mensal=form.limite_mensal.data or None,
+            )
             db.session.add(cat)
             db.session.commit()
             flash(f'Categoria "{cat.nome}" criada.', 'success')
+    return redirect(url_for('gastos.categorias'))
+
+
+@gastos_bp.route('/categorias/editar/<int:id>', methods=['POST'])
+@login_required
+def editar_categoria(id: int):
+    cat = db.get_or_404(Categoria, id)
+    form = CategoriaForm()
+    if form.validate_on_submit():
+        duplicata = db.session.scalar(
+            db.select(Categoria).where(Categoria.nome == form.nome.data, Categoria.id != id)
+        )
+        if duplicata:
+            flash('Já existe outra categoria com esse nome.', 'danger')
+        else:
+            cat.nome = form.nome.data
+            cat.tipo = form.tipo.data
+            cat.cor = form.cor.data
+            cat.limite_mensal = form.limite_mensal.data or None
+            db.session.commit()
+            flash(f'Categoria "{cat.nome}" atualizada.', 'success')
+    else:
+        flash('Erro ao atualizar categoria.', 'danger')
     return redirect(url_for('gastos.categorias'))
 
 

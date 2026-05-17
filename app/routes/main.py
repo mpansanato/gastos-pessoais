@@ -131,6 +131,39 @@ def dashboard():
         'cores':  [cat_cores[c[0]] for c in cat_sorted],
     })
 
+    # ── Limites por Categoria ────────────────────────────────────────────────
+    cat_pagos: dict[str, float] = {}
+    cat_limites: dict[str, float] = {}
+    cat_cores_lim: dict[str, str] = {}
+
+    for g in gastos_mes:
+        if g.categoria.limite_mensal is not None:
+            nome_cat = g.categoria.nome
+            cat_limites[nome_cat] = float(g.categoria.limite_mensal)
+            cat_cores_lim[nome_cat] = g.categoria.cor
+            if g.valor_pago is not None:
+                cat_pagos[nome_cat] = cat_pagos.get(nome_cat, 0) + float(g.valor_pago)
+
+    limites_categorias = []
+    for nome_cat, limite in sorted(cat_limites.items()):
+        pago = cat_pagos.get(nome_cat, 0.0)
+        pct = (pago / limite * 100) if limite > 0 else 0.0
+        if pct < 80:
+            cor_barra = 'success'
+        elif pct < 100:
+            cor_barra = 'warning'
+        else:
+            cor_barra = 'danger'
+        limites_categorias.append({
+            'nome':      nome_cat,
+            'cor':       cat_cores_lim[nome_cat],
+            'pago':      pago,
+            'limite':    limite,
+            'pct':       int(pct) if pct == int(pct) else round(pct, 1),
+            'pct_barra': min(pct, 100.0),
+            'cor_barra': cor_barra,
+        })
+
     # ── Chart 2: Evolução gastos últimos 6 meses ────────────────────────────
     gastos_6m_labels, gastos_6m_pago, gastos_6m_prev = [], [], []
     m, a = mes, ano
@@ -211,4 +244,5 @@ def dashboard():
         chart_patrimonio=chart_patrimonio,
         tem_gastos=len(gastos_mes) > 0,
         tem_investimentos=len(hist_data) > 0,
+        limites_categorias=limites_categorias,
     )

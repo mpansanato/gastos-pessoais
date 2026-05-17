@@ -9,6 +9,7 @@ class Categoria(db.Model):
     tipo = db.Column(db.String(10), nullable=False, default='variavel')  # fixo | variavel
     cor = db.Column(db.String(7), nullable=False, default='#6c757d')
     ordem = db.Column(db.Integer, default=0)
+    limite_mensal = db.Column(db.Numeric(12, 2), nullable=True)
 
     gastos = db.relationship('Gasto', backref='categoria', lazy='dynamic')
 

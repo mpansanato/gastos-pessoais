@@ -19,6 +19,7 @@
                             <th>Nome</th>
                             <th>Tipo</th>
                             <th>Cor</th>
+                            <th>Limite/mês</th>
                             <th style="width:60px"></th>
                         </tr>
                     </thead>
@@ -36,7 +37,26 @@
                                     {{ cat.cor }}
                                 </span>
                             </td>
+                            <td>
+                                {% if cat.limite_mensal %}
+                                    {{ cat.limite_mensal | brl }}
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
                             <td class="text-end">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-secondary py-0 px-2 me-1"
+                                        title="Editar"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalEditarCategoria"
+                                        data-id="{{ cat.id }}"
+                                        data-nome="{{ cat.nome }}"
+                                        data-tipo="{{ cat.tipo }}"
+                                        data-cor="{{ cat.cor }}"
+                                        data-limite="{{ cat.limite_mensal if cat.limite_mensal else '' }}">
+                                    <i class="bi bi-pencil" style="font-size:.8rem;"></i>
+                                </button>
                                 <form method="POST"
                                       action="{{ url_for('gastos.excluir_categoria', id=cat.id) }}"
                                       class="d-inline"
@@ -87,9 +107,18 @@
                         <div class="form-text text-muted small">Fixo: valor mensal recorrente. Variável: muda a cada mês.</div>
                     </div>
 
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <label class="form-label fw-medium">Cor</label>
                         {{ form.cor(class="form-select") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.limite_mensal.label(class="form-label fw-medium") }}
+                        {{ form.limite_mensal(class="form-control", placeholder="Ex: 1.500,00 (opcional)") }}
+                        <div class="form-text text-muted small">Deixe em branco para sem limite.</div>
+                        {% for e in form.limite_mensal.errors %}
+                            <div class="text-danger small">{{ e }}</div>
+                        {% endfor %}
                     </div>
 
                     {{ form.submit(class="btn btn-success w-100 fw-semibold") }}
@@ -105,4 +134,52 @@
     </div>
 
 </div>
+
+<!-- Modal Editar Categoria -->
+<div class="modal fade" id="modalEditarCategoria" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold">Editar Categoria</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="formEditarCategoria" action="" novalidate>
+                {{ form.hidden_tag() }}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Nome *</label>
+                        {{ form.nome(class="form-control", id="editCategoriaNome") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Tipo *</label>
+                        {{ form.tipo(class="form-select", id="editCategoriaTipo") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Cor</label>
+                        {{ form.cor(class="form-select", id="editCategoriaCor") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Limite Mensal (R$)</label>
+                        {{ form.limite_mensal(class="form-control", id="editCategoriaLimite", placeholder="Ex: 1.500,00 (opcional)") }}
+                        <div class="form-text text-muted small">Deixe em branco para sem limite.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+document.getElementById('modalEditarCategoria').addEventListener('show.bs.modal', function(event) {
+    const btn = event.relatedTarget;
+    document.getElementById('formEditarCategoria').action = '/gastos/categorias/editar/' + btn.getAttribute('data-id');
+    document.getElementById('editCategoriaNome').value = btn.getAttribute('data-nome');
+    document.getElementById('editCategoriaTipo').value = btn.getAttribute('data-tipo');
+    document.getElementById('editCategoriaCor').value = btn.getAttribute('data-cor');
+    document.getElementById('editCategoriaLimite').value = btn.getAttribute('data-limite');
+});
+</script>
 {% endblock %}
