@@ -166,6 +166,7 @@ def create_app(config_class=Config):
     from app.routes.investimentos import investimentos_bp
     from app.routes.projecoes import projecoes_bp
     from app.routes.dados import dados_bp
+    from app.routes.relatorio import relatorio_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(gastos_bp)
@@ -174,6 +175,7 @@ def create_app(config_class=Config):
     app.register_blueprint(investimentos_bp)
     app.register_blueprint(projecoes_bp)
     app.register_blueprint(dados_bp)
+    app.register_blueprint(relatorio_bp)
 
     with app.app_context():
         data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')

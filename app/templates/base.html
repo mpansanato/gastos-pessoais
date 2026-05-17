@@ -55,6 +55,10 @@
            class="nav-link {% if request.blueprint == 'projecoes' %}active{% endif %}">
             <i class="bi bi-calendar-range"></i> Projeções
         </a>
+        <a href="{{ url_for('relatorio.index') }}"
+           class="nav-link {% if request.blueprint == 'relatorio' %}active{% endif %}">
+            <i class="bi bi-file-earmark-bar-graph me-2"></i>Relatório Anual
+        </a>
 
         <span class="nav-section mt-2">Sistema</span>
         <a href="{{ url_for('dados.index') }}"
