@@ -143,8 +143,8 @@
             <tfoot class="table-light fw-semibold">
               <tr>
                 <td>Total</td>
-                <td class="text-end">{{ meses_data | sum(attribute='salario') | brl }}</td>
-                <td class="text-end">{{ meses_data | sum(attribute='extras') | brl }}</td>
+                <td class="text-end">{{ meses_data | rejectattr('eh_futuro') | sum(attribute='salario') | brl }}</td>
+                <td class="text-end">{{ meses_data | rejectattr('eh_futuro') | sum(attribute='extras') | brl }}</td>
                 <td class="text-end">{{ total_recebido | brl }}</td>
                 <td class="text-end">{{ meses_data | sum(attribute='previsto') | brl }}</td>
                 <td class="text-end">{{ total_gasto | brl }}</td>
@@ -440,6 +440,7 @@ if (chartCatDonutData.labels && chartCatDonutData.labels.length) {
 
 // Seção G — Donuts investimentos
 function criarDonut(id, data) {
+  if (!document.getElementById(id)) return;
   if (!data.labels || !data.labels.length) return;
   new Chart(document.getElementById(id), {
     type: 'doughnut',

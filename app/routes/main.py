@@ -1,5 +1,5 @@
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint, render_template
 from flask_login import login_required
@@ -102,10 +102,7 @@ def dashboard():
 
     # ── Vencimentos próximos (30 dias) ──────────────────────────────────────
     hoje_date = date.today()
-    try:
-        limite_30 = hoje_date.replace(day=min(hoje_date.day + 30, 28))
-    except ValueError:
-        limite_30 = hoje_date.replace(month=hoje_date.month + 1, day=1)
+    limite_30 = hoje_date + timedelta(days=30)
 
     vencimentos_proximos = db.session.scalars(
         db.select(Investimento)

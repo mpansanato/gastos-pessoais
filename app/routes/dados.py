@@ -2,7 +2,7 @@ import io
 import os
 from datetime import datetime
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file
 from flask_login import login_required
 
 from app.extensions import db
@@ -256,7 +256,7 @@ def _guess_inst(nome: str, insts_por_nome: dict) -> Instituicao | None:
 def _parse_gastos_sheet(ws, ano: int) -> dict:
     """Extrai gastos do Excel. Retorna {(mes, ano): [{'descricao', 'valor_previsto', 'valor_pago'}]}"""
     # Passo 1: encontrar posição das colunas de cada mês
-    mes_cols = []  # [(mes_num, col_desc)]
+    mes_cols = []  # [(mes_num, col_desc, ano_cell)]
     for row in ws.iter_rows(min_row=1, max_row=8):
         for cell in row:
             if not cell.value or not isinstance(cell.value, str):
@@ -265,8 +265,8 @@ def _parse_gastos_sheet(ws, ano: int) -> dict:
             # Verificar nome completo do mês
             for nome, num in MESES_PT.items():
                 if val == nome or val.startswith(nome + '/') or val.startswith(nome + ' '):
-                    if not any(m == num for m, _ in mes_cols):
-                        mes_cols.append((num, cell.column))
+                    if not any(m == num for m, _, _a in mes_cols):
+                        mes_cols.append((num, cell.column, ano))
             # Verificar abreviação (mai/26)
             for abrev, num in MESES_ABREV_PT.items():
                 if val.startswith(abrev + '/') or val.startswith(abrev + ' '):
@@ -277,15 +277,15 @@ def _parse_gastos_sheet(ws, ano: int) -> dict:
                         ano_cell = 2000 + a if a < 100 else a
                     else:
                         ano_cell = ano
-                    if not any(m == num for m, _ in mes_cols):
-                        mes_cols.append((num, cell.column))
+                    if not any(m == num for m, _, _a in mes_cols):
+                        mes_cols.append((num, cell.column, ano_cell))
 
     if not mes_cols:
         return {}
 
     # Passo 2: para cada mês, encontrar a linha inicial de dados
     resultado = {}
-    for mes_num, col_desc in mes_cols:
+    for mes_num, col_desc, ano_cell in mes_cols:
         # Encontrar linha do header "Gastos"
         header_row = None
         for r in ws.iter_rows(min_row=1, max_row=15, min_col=col_desc, max_col=col_desc):
@@ -306,10 +306,12 @@ def _parse_gastos_sheet(ws, ano: int) -> dict:
 
             desc = str(desc_cell.value or '').strip()
             if not desc or desc.lower() in SKIP_GASTOS:
-                if desc.lower() in {'total', 'salário', 'salario'}:
-                    # Tentar capturar salário
-                    if desc.lower() in {'salário', 'salario'} and valor_cell.value:
-                        resultado[('salario', mes_num, ano)] = float(valor_cell.value)
+                if desc.lower() in {'salário', 'salario'}:
+                    # Capturar salário e continuar processando as linhas seguintes
+                    if valor_cell.value:
+                        resultado[('salario', mes_num, ano_cell)] = float(valor_cell.value)
+                    continue
+                if desc.lower() in {'total', 'parcial', 'sobra', 'total geral'}:
                     break
                 continue
 
@@ -328,7 +330,7 @@ def _parse_gastos_sheet(ws, ano: int) -> dict:
             })
 
         if items:
-            resultado[(mes_num, ano)] = items
+            resultado[(mes_num, ano_cell)] = items
 
     return resultado
 

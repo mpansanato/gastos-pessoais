@@ -299,7 +299,7 @@ function preencherAporte(valor) {
     const input = document.getElementById('aporte_mensal_input');
     if (!input) return;
     // Formata com 2 casas decimais no padrão que o Flask-WTF espera (ponto decimal)
-    input.value = valor.toFixed(2);
+    input.value = valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     input.focus();
     input.classList.add('border-primary');
     setTimeout(() => input.classList.remove('border-primary'), 1500);

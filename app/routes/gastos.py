@@ -412,6 +412,10 @@ def nova_categoria():
             db.session.add(cat)
             db.session.commit()
             flash(f'Categoria "{cat.nome}" criada.', 'success')
+    else:
+        for erros in form.errors.values():
+            for e in erros:
+                flash(e, 'danger')
     return redirect(url_for('gastos.categorias'))
 
 
@@ -442,7 +446,10 @@ def editar_categoria(id: int):
 @login_required
 def excluir_categoria(id: int):
     cat = db.get_or_404(Categoria, id)
-    if cat.gastos.count() > 0:
+    qtd_gastos = db.session.scalar(
+        db.select(db.func.count()).select_from(Gasto).where(Gasto.categoria_id == cat.id)
+    )
+    if qtd_gastos > 0:
         flash('Não é possível excluir: categoria possui gastos vinculados.', 'danger')
     else:
         nome = cat.nome

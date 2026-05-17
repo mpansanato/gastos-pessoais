@@ -35,6 +35,10 @@
            class="nav-link {% if request.blueprint == 'gastos_fixos' %}active{% endif %}" style="padding-left:2.2rem;">
             <i class="bi bi-arrow-repeat"></i> Gastos Fixos
         </a>
+        <a href="{{ url_for('gastos.categorias') }}"
+           class="nav-link {% if request.endpoint == 'gastos.categorias' %}active{% endif %}" style="padding-left:2.2rem;">
+            <i class="bi bi-tags"></i> Categorias
+        </a>
         <a href="{{ url_for('entradas_fixas.index') }}"
            class="nav-link {% if request.blueprint == 'entradas_fixas' %}active{% endif %}" style="padding-left:2.2rem;">
             <i class="bi bi-arrow-repeat"></i> Entradas Fixas
@@ -50,6 +54,10 @@
         <a href="{{ url_for('investimentos.painel_risco') }}"
            class="nav-link {% if request.endpoint == 'investimentos.painel_risco' %}active{% endif %}" style="padding-left:2.2rem;">
             <i class="bi bi-shield-exclamation"></i> Painel de Risco
+        </a>
+        <a href="{{ url_for('investimentos.instituicoes') }}"
+           class="nav-link {% if request.endpoint == 'investimentos.instituicoes' %}active{% endif %}" style="padding-left:2.2rem;">
+            <i class="bi bi-building"></i> Instituições
         </a>
         <a href="{{ url_for('projecoes.index') }}"
            class="nav-link {% if request.blueprint == 'projecoes' %}active{% endif %}">

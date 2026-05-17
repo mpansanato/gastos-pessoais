@@ -136,7 +136,8 @@
 </div>
 
 <!-- Modal Editar Categoria -->
-<div class="modal fade" id="modalEditarCategoria" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalEditarCategoria" tabindex="-1" aria-hidden="true"
+     data-action-base="{{ url_for('gastos.editar_categoria', id=0) | replace('/0', '') }}">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -175,7 +176,8 @@
 <script>
 document.getElementById('modalEditarCategoria').addEventListener('show.bs.modal', function(event) {
     const btn = event.relatedTarget;
-    document.getElementById('formEditarCategoria').action = '/gastos/categorias/editar/' + btn.getAttribute('data-id');
+    const modal = event.currentTarget;
+    document.getElementById('formEditarCategoria').action = modal.getAttribute('data-action-base') + '/' + btn.getAttribute('data-id');
     document.getElementById('editCategoriaNome').value = btn.getAttribute('data-nome');
     document.getElementById('editCategoriaTipo').value = btn.getAttribute('data-tipo');
     document.getElementById('editCategoriaCor').value = btn.getAttribute('data-cor');

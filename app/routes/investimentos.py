@@ -277,7 +277,7 @@ def carteira():
         rendimento_mensal_pct=param.rendimento_mensal_pct if param else None
     )
 
-    # Último saldo confirmado de cada ativo (para exibir na lista)
+    # Último saldo confirmado de cada ativo
     dados = []
     for base in bases:
         ultimo = db.session.scalar(
@@ -288,9 +288,21 @@ def carteira():
         )
         dados.append({'base': base, 'ultimo': ultimo})
 
+    # Agrupa por instituição, ordenando ativos por valor desc dentro de cada grupo
+    grupos: dict = {}
+    for d in dados:
+        inst = d['base'].instituicao
+        if inst.id not in grupos:
+            grupos[inst.id] = {'instituicao': inst, 'ativos': []}
+        grupos[inst.id]['ativos'].append(d)
+    for g in grupos.values():
+        g['ativos'].sort(key=lambda d: float(d['ultimo'].valor) if d['ultimo'] else 0, reverse=True)
+        g['total'] = sum(float(d['ultimo'].valor) if d['ultimo'] else 0 for d in g['ativos'])
+    grupos_lista = sorted(grupos.values(), key=lambda g: g['total'], reverse=True)
+
     return render_template(
         'investimentos/carteira.html',
-        dados=dados, form=form, taxa_form=taxa_form,
+        grupos=grupos_lista, form=form, taxa_form=taxa_form,
         param=param, instituicoes=instituicoes,
         hoje_mes=hoje.month, hoje_ano=hoje.year,
         meses=MESES,
@@ -561,7 +573,8 @@ def excluir_retirada(id: int):
     # Reprojeta futuros com saldo restaurado
     base = db.session.get(InvestimentoBase, base_id)
     taxa = _get_taxa()
-    _reprojetar_futuros(base, mes, ano, taxa, hoje.month, hoje.year)
+    if base:
+        _reprojetar_futuros(base, mes, ano, taxa, hoje.month, hoje.year)
 
     flash('Retirada removida — saldo estornado, lançamento em Gastos Mensais excluído e projeções recalculadas.', 'warning')
     return redirect(url_for('investimentos.por_mes', ano=ano, mes=mes))
@@ -651,7 +664,7 @@ def por_mes(ano: int, mes: int):
     todos = db.session.scalars(
         db.select(Investimento)
         .where(Investimento.mes == mes, Investimento.ano == ano)
-        .order_by(Investimento.instituicao_id, Investimento.nome)
+        .order_by(Investimento.instituicao_id, Investimento.valor.desc())
     ).all()
 
     total_geral = sum(float(i.valor) for i in todos)
@@ -769,7 +782,10 @@ def nova_instituicao():
 @login_required
 def excluir_instituicao(id: int):
     inst = db.get_or_404(Instituicao, id)
-    if inst.investimentos.count() > 0:
+    qtd = db.session.scalar(
+        db.select(db.func.count()).select_from(Investimento).where(Investimento.instituicao_id == inst.id)
+    )
+    if qtd > 0:
         flash('Não é possível excluir: instituição possui investimentos vinculados.', 'danger')
     else:
         nome = inst.nome
@@ -850,6 +866,7 @@ def painel_risco():
         e['exposto'] = max(0.0, e['fgc_elegivel'] - FGC_LIMITE)
         total_coberto += e['coberto']
         total_exposto += e['exposto']
+        e['lancamentos'].sort(key=lambda i: float(i.valor), reverse=True)
     emissores = dict(sorted(emissores.items(), key=lambda x: x[1]['total'], reverse=True))
 
     alertas = []
@@ -885,5 +902,6 @@ def painel_risco():
 
 
 def _brl(v: float) -> str:
+    sign = '-' if v < 0 else ''
     fmt = '{:,.2f}'.format(abs(v)).replace(',', 'X').replace('.', ',').replace('X', '.')
-    return f'R$ {fmt}'
+    return f'{sign}R$ {fmt}'

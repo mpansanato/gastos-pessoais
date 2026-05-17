@@ -11,7 +11,7 @@ class Categoria(db.Model):
     ordem = db.Column(db.Integer, default=0)
     limite_mensal = db.Column(db.Numeric(12, 2), nullable=True)
 
-    gastos = db.relationship('Gasto', backref='categoria', lazy='dynamic')
+    gastos = db.relationship('Gasto', backref='categoria', lazy='select')
 
     def __repr__(self) -> str:
         return f'<Categoria {self.nome}>'

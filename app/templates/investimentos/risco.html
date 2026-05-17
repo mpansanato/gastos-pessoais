@@ -115,92 +115,93 @@
     </div>
 </div>
 
-{# ── Concentração por Emissor ───────────────────────────────────────────── #}
-<h6 class="text-uppercase text-muted fw-semibold mb-3" style="font-size:.72rem;letter-spacing:.08em;">
-    Concentração por Emissor — Cobertura FGC
-</h6>
-
+{# ── Posições por Emissor ────────────────────────────────────────────────── #}
 {% if emissores %}
+<h6 class="text-uppercase text-muted fw-semibold mb-3 mt-4" style="font-size:.72rem;letter-spacing:.08em;">
+    Posições por Emissor
+</h6>
 <div class="card mb-4">
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+        <table class="table align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Emissor</th>
+                    <th>Investimento</th>
+                    <th>Tipo</th>
+                    <th>Corretora</th>
                     <th class="text-center">Risco</th>
-                    <th class="text-end">Total Aplicado</th>
-                    <th class="text-end">Elegível FGC</th>
-                    <th class="text-end text-success">Coberto</th>
-                    <th class="text-end text-danger">Acima FGC</th>
+                    <th class="text-end">Valor</th>
+                    <th class="text-end">% Emissor</th>
                     <th class="text-end">% Portfólio</th>
                 </tr>
             </thead>
             <tbody>
-                {% for nome_emissor, e in emissores.items() %}
-                {% set linha_perigo = e.exposto > 0 and e.risco_max == 'alto' %}
-                {% set linha_aviso  = e.exposto > 0 or e.risco_max == 'alto' %}
-                <tr {% if linha_perigo %}class="table-danger"{% elif linha_aviso %}class="table-warning"{% endif %}>
-                    <td>
-                        <span class="fw-medium">{{ nome_emissor }}</span>
-                        {% if e.lancamentos | length > 1 %}
-                        <small class="text-muted ms-1">({{ e.lancamentos | length }} títulos)</small>
+            {% for nome_emissor, e in emissores.items() %}
+            {# Cabeçalho do emissor #}
+            <tr style="background:#f8f9fa;">
+                <td colspan="4" class="fw-semibold py-2">
+                    <span class="me-2">{{ nome_emissor }}</span>
+                    <span class="badge bg-secondary bg-opacity-50 fw-normal" style="font-size:.68rem;">
+                        {{ e.lancamentos | length }} ativo{{ 's' if e.lancamentos | length > 1 else '' }}
+                    </span>
+                    <span class="badge fw-normal ms-1
+                        {% if e.risco_max == 'alto' %}bg-danger
+                        {% elif e.risco_max == 'medio' %}bg-warning text-dark
+                        {% else %}bg-success{% endif %}"
+                        style="font-size:.68rem;">
+                        {{ {'alto':'Alto','medio':'Médio','baixo':'Baixo'}[e.risco_max] }}
+                    </span>
+                </td>
+                <td class="text-end fw-bold">{{ e.total | brl }}</td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end fw-semibold
+                    {% if e.pct >= 30 %}text-danger{% elif e.pct >= 20 %}text-warning{% else %}text-muted{% endif %}">
+                    {{ '%.1f'|format(e.pct) }}%
+                </td>
+            </tr>
+            {# Investimentos do emissor #}
+            {% for inv in e.lancamentos %}
+            <tr>
+                <td class="ps-4">
+                    <span class="small">{{ inv.nome }}</span>
+                    {% if inv.observacao %}
+                    <small class="text-muted d-block">{{ inv.observacao }}</small>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge bg-secondary bg-opacity-75 fw-normal" style="font-size:.68rem;">
+                        {{ inv.tipo }}
+                        {% if inv.tipo in ['CDB','LCI','LCA','LC','LH','Poupança'] %}
+                        <i class="bi bi-shield-check text-success"></i>
                         {% endif %}
-                        <div class="mt-1">
-                            {% for inv in e.lancamentos %}
-                            <span class="badge bg-secondary bg-opacity-50 fw-normal me-1" style="font-size:.65rem;">
-                                {{ inv.tipo }}
-                                {% if inv.tipo in ['CDB','LCI','LCA','LC','LH','Poupança'] %}
-                                <i class="bi bi-shield-check text-success"></i>
-                                {% endif %}
-                            </span>
-                            {% endfor %}
-                        </div>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge
-                            {% if e.risco_max == 'alto' %}bg-danger
-                            {% elif e.risco_max == 'medio' %}bg-warning text-dark
-                            {% else %}bg-success{% endif %}">
-                            {{ {'alto':'Alto','medio':'Médio','baixo':'Baixo'}[e.risco_max] }}
-                        </span>
-                    </td>
-                    <td class="text-end fw-semibold">{{ e.total | brl }}</td>
-                    <td class="text-end">
-                        {% if e.fgc_elegivel > 0 %}
-                            {{ e.fgc_elegivel | brl }}
-                        {% else %}
-                            <span class="text-muted small">Não elegível</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-end text-success fw-semibold">
-                        {% if e.coberto > 0 %}{{ e.coberto | brl }}{% else %}<span class="text-muted">—</span>{% endif %}
-                    </td>
-                    <td class="text-end fw-bold">
-                        {% if e.exposto > 0 %}
-                            <span class="text-danger">{{ e.exposto | brl }}</span>
-                            <i class="bi bi-exclamation-circle-fill text-danger ms-1"></i>
-                        {% else %}
-                            <span class="text-muted small">—</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-end">
-                        <span class="fw-semibold {% if e.pct >= 30 %}text-danger{% elif e.pct >= 20 %}text-warning{% else %}text-muted{% endif %}">
-                            {{ '%.1f'|format(e.pct) }}%
-                        </span>
-                    </td>
-                </tr>
-                {% endfor %}
+                    </span>
+                </td>
+                <td class="text-muted small">{{ inv.instituicao.nome }}</td>
+                <td class="text-center">
+                    <span class="badge fw-normal
+                        {% if inv.risco == 'alto' %}bg-danger
+                        {% elif inv.risco == 'medio' %}bg-warning text-dark
+                        {% else %}bg-success{% endif %}"
+                        style="font-size:.68rem;">
+                        {{ {'baixo':'Baixo','medio':'Médio','alto':'Alto'}[inv.risco] }}
+                    </span>
+                </td>
+                <td class="text-end fw-semibold">{{ inv.valor | brl }}</td>
+                <td class="text-end text-muted small">
+                    {{ '%.1f'|format(inv.valor | float / e.total * 100 if e.total else 0) }}%
+                </td>
+                <td class="text-end text-muted small">
+                    {{ '%.1f'|format(inv.valor | float / total * 100 if total else 0) }}%
+                </td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
             </tbody>
             <tfoot class="table-light">
                 <tr>
-                    <td colspan="2" class="fw-bold text-muted small">Total</td>
+                    <td colspan="4" class="fw-bold text-muted small">Total Portfólio</td>
                     <td class="text-end fw-bold">{{ total | brl }}</td>
                     <td></td>
-                    <td class="text-end fw-bold text-success">{{ total_coberto | brl }}</td>
-                    <td class="text-end fw-bold {% if total_exposto > 0 %}text-danger{% else %}text-muted{% endif %}">
-                        {% if total_exposto > 0 %}{{ total_exposto | brl }}{% else %}—{% endif %}
-                    </td>
-                    <td></td>
+                    <td class="text-end fw-bold">100%</td>
                 </tr>
             </tfoot>
         </table>
@@ -233,10 +234,12 @@
                     <td class="text-muted small">{{ inv.instituicao.nome }}</td>
                     <td class="text-end">{{ inv.valor | brl }}</td>
                     <td>
-                        <a href="{{ url_for('investimentos.editar', id=inv.id) }}"
+                        {% if inv.investimento_base_id %}
+                        <a href="{{ url_for('investimentos.editar_carteira', id=inv.investimento_base_id) }}"
                            class="btn btn-sm btn-outline-primary py-0 px-2">
                             <i class="bi bi-pencil" style="font-size:.75rem;"></i> Preencher emissor
                         </a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

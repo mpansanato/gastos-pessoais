@@ -222,7 +222,7 @@
                         {{ '%.1f'|format(inv.valor|float / total_geral * 100 if total_geral else 0) }}%
                     </td>
                     <td class="text-end">
-                        {% if inv.investimento_base_id and eh_passado or eh_atual %}
+                        {% if inv.investimento_base_id and (eh_passado or eh_atual) %}
                             {% if eh_passado or eh_atual %}
                             <button class="btn btn-sm btn-outline-warning py-0 px-2 me-1"
                                     data-bs-toggle="modal"

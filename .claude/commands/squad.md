@@ -83,6 +83,19 @@ Salve a especificação retornada em `.squad-workspace/01-po-spec.md`.
 
 ---
 
+## HUMAN IN THE LOOP — Revisão da Especificação PO
+
+**PARE AQUI.** Antes de seguir para o LT, apresente a especificação ao usuário:
+
+1. Exiba o conteúdo de `.squad-workspace/01-po-spec.md` de forma legível
+2. Pergunte explicitamente: **"A especificação está correta? Posso seguir para o planejamento técnico, ou deseja ajustes?"**
+3. **Aguarde a resposta do usuário.**
+   - Se aprovada: siga para a FASE 2
+   - Se houver ajustes: revise a especificação (você mesmo ou re-invocando o PO Agent com o feedback), atualize `.squad-workspace/01-po-spec.md` e repita esta etapa
+   - Se solicitado feedback adicional: pergunte ao usuário o que falta antes de continuar
+
+---
+
 ## FASE 2 — AGENTE LT: Planejamento Técnico
 
 Com a especificação do PO em mãos, invoque um **Agent** com o seguinte prompt:
