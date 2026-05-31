@@ -11,6 +11,7 @@ from app.models.gasto import Gasto
 from app.models.investimento import Investimento
 from app.models.parametro_mensal import ParametroMensal
 from app.models.receita_extra import ReceitaExtra
+from app.models.receita_fixa import ReceitaFixa
 
 relatorio_bp = Blueprint('relatorio', __name__, url_prefix='/relatorio')
 
@@ -224,16 +225,46 @@ def index():
             ) or 0
         )
         eh_futuro = (ano * 100 + m) > hoje_ref
-        receita_total = salario + extras
-        saldo = receita_total - pago if not eh_futuro else None
+
+        # Entradas fixas do mês
+        fixas_previsto_val = db.session.scalar(
+            db.select(db.func.sum(ReceitaFixa.valor))
+            .where(ReceitaFixa.mes == m, ReceitaFixa.ano == ano)
+        ) or 0
+        fixas_previsto = float(fixas_previsto_val)
+
+        fixas_realizado_val = db.session.scalar(
+            db.select(db.func.sum(ReceitaFixa.valor_realizado))
+            .where(ReceitaFixa.mes == m, ReceitaFixa.ano == ano,
+                   ReceitaFixa.valor_realizado.isnot(None))
+        )
+        fixas_realizado = float(fixas_realizado_val) if fixas_realizado_val is not None else None
+
+        receita_total    = salario + extras + fixas_previsto
+        receita_realizada = (salario + extras + fixas_realizado) if fixas_realizado is not None else None
+
+        if eh_futuro:
+            saldo = None
+        elif receita_realizada is not None:
+            saldo = receita_realizada - pago
+        else:
+            saldo = None  # sem valor_realizado: não exibir saldo
+
         meses_data.append({
             'mes': m, 'nome': MESES_NOMES[m - 1], 'abrev': MESES_ABREV[m - 1],
             'salario': salario, 'extras': extras, 'receita_total': receita_total,
             'previsto': previsto, 'pago': pago, 'saldo': saldo, 'eh_futuro': eh_futuro,
+            'fixas_previsto':    fixas_previsto,
+            'fixas_realizado':   fixas_realizado,
+            'receita_realizada': receita_realizada,
         })
 
     # ── Totais anuais (Seção A) ──────────────────────────────────────────
-    total_recebido = sum(m['receita_total'] for m in meses_data if not m['eh_futuro'])
+    # Total recebido: usa receita_realizada quando disponível, senão receita_total
+    total_recebido = sum(
+        m['receita_realizada'] if m['receita_realizada'] is not None else m['receita_total']
+        for m in meses_data if not m['eh_futuro']
+    )
     total_gasto = sum(m['pago'] for m in meses_data if not m['eh_futuro'])
     saldo_anual = total_recebido - total_gasto
     taxa_poupanca = round(saldo_anual / total_recebido * 100, 1) if total_recebido > 0 else None

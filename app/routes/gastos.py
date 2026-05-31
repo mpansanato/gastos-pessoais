@@ -71,6 +71,15 @@ class ReceitaExtraForm(FlaskForm):
     submit = SubmitField('Adicionar')
 
 
+class RegistrarRealizadoForm(FlaskForm):
+    valor_realizado = DecimalField(
+        'Valor Realizado (R$)',
+        validators=[DataRequired(), NumberRange(min=0)],
+        places=2,
+    )
+    submit = SubmitField('Registrar')
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _get_or_create_parametro(mes: int, ano: int) -> ParametroMensal:
@@ -95,6 +104,14 @@ def _calcular_totais(gastos: list, salario: Decimal, receitas_extras: list = Non
     total_extras = sum(float(r.valor) for r in receitas_extras)
     total_fixas = sum(float(r.valor) for r in receitas_fixas)
     total_entradas = sal + total_extras + total_fixas
+    total_fixas_previsto  = total_fixas
+    total_fixas_realizado = sum(
+        float(r.valor_realizado)
+        for r in receitas_fixas
+        if r.valor_realizado is not None
+    )
+    saldo_realizado = total_fixas_realizado + total_extras - total_pago
+    saldo_previsto  = total_fixas_previsto + total_extras + sal - total_previsto
     return {
         'total_previsto': total_previsto,
         'total_pago': total_pago,
@@ -103,6 +120,10 @@ def _calcular_totais(gastos: list, salario: Decimal, receitas_extras: list = Non
         'total_entradas': total_entradas,
         'parcial': total_entradas - total_previsto,
         'sobra': total_entradas - total_pago,
+        'total_fixas_previsto':  total_fixas_previsto,
+        'total_fixas_realizado': total_fixas_realizado,
+        'saldo_realizado':       saldo_realizado,
+        'saldo_previsto':        saldo_previsto,
     }
 
 
@@ -204,6 +225,9 @@ def por_mes(ano: int, mes: int):
         salario_form=salario_form,
         gasto_form=gasto_form,
         receita_form=receita_form,
+        registrar_form=RegistrarRealizadoForm(),
+        hoje_mes=datetime.today().month,
+        hoje_ano=datetime.today().year,
         mes_ant=mes_ant, ano_ant=ano_ant,
         mes_prox=mes_prox, ano_prox=ano_prox,
     )
@@ -380,6 +404,35 @@ def excluir_receita(id: int):
     db.session.delete(receita)
     db.session.commit()
     flash('Receita removida.', 'success')
+    return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
+
+
+@gastos_bp.route('/<int:ano>/<int:mes>/receita-fixa/<int:id>/registrar', methods=['POST'])
+@login_required
+def registrar_realizado(ano: int, mes: int, id: int):
+    hoje = datetime.today()
+    if (ano * 100 + mes) > (hoje.year * 100 + hoje.month):
+        flash('Não é possível registrar realizado em mês futuro.', 'danger')
+        return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
+    receita = db.session.scalar(
+        db.select(ReceitaFixa).where(
+            ReceitaFixa.id == id,
+            ReceitaFixa.mes == mes,
+            ReceitaFixa.ano == ano,
+        )
+    )
+    if not receita:
+        flash('Lançamento não encontrado.', 'danger')
+        return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
+    form = RegistrarRealizadoForm()
+    if form.validate_on_submit():
+        receita.valor_realizado = form.valor_realizado.data
+        db.session.commit()
+        flash(f'Recebimento de "{receita.descricao}" registrado.', 'success')
+    else:
+        for erros in form.errors.values():
+            for e in erros:
+                flash(e, 'danger')
     return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
 
 

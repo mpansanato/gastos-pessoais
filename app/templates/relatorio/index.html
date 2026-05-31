@@ -116,6 +116,8 @@
                 <th>Mês</th>
                 <th class="text-end">Salário</th>
                 <th class="text-end">Extras</th>
+                <th class="text-end">Ent. Fixas<br><small class="fw-normal text-muted">Prev.</small></th>
+                <th class="text-end">Ent. Fixas<br><small class="fw-normal text-muted">Real.</small></th>
                 <th class="text-end">Receita Total</th>
                 <th class="text-end">Previsto</th>
                 <th class="text-end">Pago</th>
@@ -128,6 +130,12 @@
                 <td class="fw-medium">{{ m.nome }}</td>
                 <td class="text-end">{% if m.salario %}{{ m.salario | brl }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                 <td class="text-end">{% if m.extras %}{{ m.extras | brl }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                <td class="text-end small">
+                  {% if m.fixas_previsto %}{{ m.fixas_previsto | brl }}{% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="text-end small {% if m.fixas_realizado is not none %}text-success{% endif %}">
+                  {% if m.fixas_realizado is not none %}{{ m.fixas_realizado | brl }}{% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
                 <td class="text-end">{% if m.receita_total %}{{ m.receita_total | brl }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                 <td class="text-end">{% if m.previsto %}{{ m.previsto | brl }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                 <td class="text-end">{% if m.eh_futuro %}<span class="text-muted">—</span>{% elif m.pago %}{{ m.pago | brl }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
@@ -145,6 +153,8 @@
                 <td>Total</td>
                 <td class="text-end">{{ meses_data | rejectattr('eh_futuro') | sum(attribute='salario') | brl }}</td>
                 <td class="text-end">{{ meses_data | rejectattr('eh_futuro') | sum(attribute='extras') | brl }}</td>
+                <td class="text-end">{{ meses_data | rejectattr('eh_futuro') | sum(attribute='fixas_previsto') | brl }}</td>
+                <td class="text-end">—</td>
                 <td class="text-end">{{ total_recebido | brl }}</td>
                 <td class="text-end">{{ meses_data | sum(attribute='previsto') | brl }}</td>
                 <td class="text-end">{{ total_gasto | brl }}</td>

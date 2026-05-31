@@ -6,6 +6,7 @@ from flask import Flask
 from sqlalchemy import text
 from config import Config
 from app.extensions import db, login_manager, csrf
+from app.models.parcela_entrada_fixa import ParcelaEntradaFixa
 
 
 def _format_brl(value) -> str:
@@ -75,6 +76,65 @@ def _migrate_categorias():
         if 'limite_mensal' not in cols:
             conn.execute(text('ALTER TABLE categorias ADD COLUMN limite_mensal NUMERIC(12,2)'))
         conn.commit()
+
+
+def _migrate_receitas_fixas():
+    with db.engine.connect() as conn:
+        cols = [r[1] for r in conn.execute(text('PRAGMA table_info(receitas_fixas)'))]
+        if 'valor_realizado' not in cols:
+            conn.execute(text('ALTER TABLE receitas_fixas ADD COLUMN valor_realizado NUMERIC(12,2)'))
+        if 'dia_recebimento' not in cols:
+            conn.execute(text('ALTER TABLE receitas_fixas ADD COLUMN dia_recebimento INTEGER'))
+        if 'parcela_ordem' not in cols:
+            conn.execute(text('ALTER TABLE receitas_fixas ADD COLUMN parcela_ordem INTEGER'))
+        conn.commit()
+
+
+def _migrate_entradas_fixas():
+    with db.engine.connect() as conn:
+        cols = [r[1] for r in conn.execute(text('PRAGMA table_info(entradas_fixas)'))]
+        if 'dia_recebimento' not in cols:
+            conn.execute(text('ALTER TABLE entradas_fixas ADD COLUMN dia_recebimento INTEGER'))
+        conn.commit()
+
+
+def _migrate_salario_para_entrada_fixa():
+    from app.models.entrada_fixa import EntradaFixa
+    from app.models.receita_fixa import ReceitaFixa
+    from app.models.parametro_mensal import ParametroMensal
+
+    if db.session.scalar(
+        db.select(EntradaFixa).where(EntradaFixa.observacao == 'migrado_de_parametro_mensal')
+    ):
+        return
+
+    params = db.session.scalars(
+        db.select(ParametroMensal)
+        .where(ParametroMensal.salario > 0)
+        .order_by(ParametroMensal.ano, ParametroMensal.mes)
+    ).all()
+    if not params:
+        return
+
+    ultimo = params[-1]
+    entrada = EntradaFixa(
+        descricao='Salário',
+        valor=ultimo.salario,
+        ativo=True,
+        observacao='migrado_de_parametro_mensal',
+    )
+    db.session.add(entrada)
+    db.session.flush()
+
+    for pm in params:
+        db.session.add(ReceitaFixa(
+            descricao='Salário',
+            valor=pm.salario,
+            mes=pm.mes,
+            ano=pm.ano,
+            entrada_fixa_id=entrada.id,
+        ))
+    db.session.commit()
 
 
 def _seed_instituicoes():
@@ -184,6 +244,9 @@ def create_app(config_class=Config):
         _migrate_gastos()
         _migrate_investimentos()
         _migrate_categorias()
+        _migrate_receitas_fixas()
+        _migrate_entradas_fixas()
+        _migrate_salario_para_entrada_fixa()
         _seed_categorias()
         _seed_categorias_extras()
         _seed_instituicoes()

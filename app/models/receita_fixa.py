@@ -12,6 +12,9 @@ class ReceitaFixa(db.Model):
     ano = db.Column(db.Integer, nullable=False)
     entrada_fixa_id = db.Column(db.Integer, db.ForeignKey('entradas_fixas.id'), nullable=True)
     observacao = db.Column(db.String(300), nullable=True)
+    valor_realizado = db.Column(db.Numeric(12, 2), nullable=True)
+    dia_recebimento = db.Column(db.Integer, nullable=True)
+    parcela_ordem   = db.Column(db.Integer, nullable=True)
 
     entrada_fixa = db.relationship('EntradaFixa', back_populates='receitas')
 
