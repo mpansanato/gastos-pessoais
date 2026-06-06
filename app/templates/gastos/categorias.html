@@ -54,7 +54,7 @@
                                         data-nome="{{ cat.nome }}"
                                         data-tipo="{{ cat.tipo }}"
                                         data-cor="{{ cat.cor }}"
-                                        data-limite="{{ cat.limite_mensal if cat.limite_mensal else '' }}">
+                                        data-limite="{{ cat.limite_mensal | num_brl if cat.limite_mensal else '' }}">
                                     <i class="bi bi-pencil" style="font-size:.8rem;"></i>
                                 </button>
                                 <form method="POST"

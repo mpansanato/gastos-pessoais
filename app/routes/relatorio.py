@@ -9,7 +9,6 @@ from app.extensions import db
 from app.models.categoria import Categoria
 from app.models.gasto import Gasto
 from app.models.investimento import Investimento
-from app.models.parametro_mensal import ParametroMensal
 from app.models.receita_extra import ReceitaExtra
 from app.models.receita_fixa import ReceitaFixa
 
@@ -186,7 +185,7 @@ def index():
 
     # ── Anos disponíveis ────────────────────────────────────────────────
     anos_raw = set()
-    for col in [Gasto.ano, ReceitaExtra.ano, Investimento.ano, ParametroMensal.ano]:
+    for col in [Gasto.ano, ReceitaExtra.ano, Investimento.ano, ReceitaFixa.ano]:
         rows = db.session.execute(db.select(col).distinct()).scalars().all()
         anos_raw.update(rows)
     anos_raw.add(hoje.year)
@@ -202,10 +201,6 @@ def index():
     # ── Dados por mês (Seções B e D) ────────────────────────────────────
     meses_data = []
     for m in range(1, 13):
-        pm = db.session.scalar(
-            db.select(ParametroMensal).where(ParametroMensal.mes == m, ParametroMensal.ano == ano)
-        )
-        salario = float(pm.salario) if pm else 0.0
         extras = float(
             db.session.scalar(
                 db.select(db.func.sum(ReceitaExtra.valor))
@@ -240,8 +235,8 @@ def index():
         )
         fixas_realizado = float(fixas_realizado_val) if fixas_realizado_val is not None else None
 
-        receita_total    = salario + extras + fixas_previsto
-        receita_realizada = (salario + extras + fixas_realizado) if fixas_realizado is not None else None
+        receita_total     = extras + fixas_previsto
+        receita_realizada = (extras + fixas_realizado) if fixas_realizado is not None else None
 
         if eh_futuro:
             saldo = None
@@ -252,7 +247,7 @@ def index():
 
         meses_data.append({
             'mes': m, 'nome': MESES_NOMES[m - 1], 'abrev': MESES_ABREV[m - 1],
-            'salario': salario, 'extras': extras, 'receita_total': receita_total,
+            'extras': extras, 'receita_total': receita_total,
             'previsto': previsto, 'pago': pago, 'saldo': saldo, 'eh_futuro': eh_futuro,
             'fixas_previsto':    fixas_previsto,
             'fixas_realizado':   fixas_realizado,

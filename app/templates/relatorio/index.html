@@ -114,7 +114,6 @@
             <thead class="table-light">
               <tr>
                 <th>Mês</th>
-                <th class="text-end">Salário</th>
                 <th class="text-end">Extras</th>
                 <th class="text-end">Ent. Fixas<br><small class="fw-normal text-muted">Prev.</small></th>
                 <th class="text-end">Ent. Fixas<br><small class="fw-normal text-muted">Real.</small></th>
@@ -128,7 +127,6 @@
               {% for m in meses_data %}
               <tr {% if m.eh_futuro %}class="text-muted"{% endif %}>
                 <td class="fw-medium">{{ m.nome }}</td>
-                <td class="text-end">{% if m.salario %}{{ m.salario | brl }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                 <td class="text-end">{% if m.extras %}{{ m.extras | brl }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                 <td class="text-end small">
                   {% if m.fixas_previsto %}{{ m.fixas_previsto | brl }}{% else %}<span class="text-muted">—</span>{% endif %}
@@ -151,7 +149,6 @@
             <tfoot class="table-light fw-semibold">
               <tr>
                 <td>Total</td>
-                <td class="text-end">{{ meses_data | rejectattr('eh_futuro') | sum(attribute='salario') | brl }}</td>
                 <td class="text-end">{{ meses_data | rejectattr('eh_futuro') | sum(attribute='extras') | brl }}</td>
                 <td class="text-end">{{ meses_data | rejectattr('eh_futuro') | sum(attribute='fixas_previsto') | brl }}</td>
                 <td class="text-end">—</td>

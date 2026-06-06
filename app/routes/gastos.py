@@ -57,11 +57,6 @@ class CategoriaForm(FlaskForm):
     submit = SubmitField('Criar Categoria')
 
 
-class SalarioForm(FlaskForm):
-    salario = DecimalField('Salário (R$)', validators=[DataRequired(), NumberRange(min=0)], places=2)
-    submit = SubmitField('Salvar')
-
-
 class ReceitaExtraForm(FlaskForm):
     tipo = SelectField('Tipo', choices=[(t, t) for t in ReceitaExtra.TIPOS])
     descricao = StringField('Descrição (opcional — usa o Tipo se vazio)', validators=[Optional(), Length(max=200)])
@@ -71,13 +66,10 @@ class ReceitaExtraForm(FlaskForm):
     submit = SubmitField('Adicionar')
 
 
-class RegistrarRealizadoForm(FlaskForm):
-    valor_realizado = DecimalField(
-        'Valor Realizado (R$)',
-        validators=[DataRequired(), NumberRange(min=0)],
-        places=2,
-    )
-    submit = SubmitField('Registrar')
+class ReceitaFixaEditForm(FlaskForm):
+    valor = DecimalField('Valor Previsto (R$)', validators=[DataRequired(), NumberRange(min=0)], places=2)
+    valor_realizado = DecimalField('Valor Realizado (R$)', validators=[Optional(), NumberRange(min=0)], places=2)
+    submit = SubmitField('Salvar')
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -95,35 +87,30 @@ def _get_or_create_parametro(mes: int, ano: int) -> ParametroMensal:
     return param
 
 
-def _calcular_totais(gastos: list, salario: Decimal, receitas_extras: list = None, receitas_fixas: list = None) -> dict:
+def _calcular_totais(gastos: list, receitas_extras: list = None, receitas_fixas: list = None) -> dict:
     receitas_extras = receitas_extras or []
     receitas_fixas = receitas_fixas or []
     total_previsto = sum(float(g.valor_previsto) for g in gastos)
     total_pago = sum(float(g.valor_pago) for g in gastos if g.valor_pago is not None)
-    sal = float(salario)
     total_extras = sum(float(r.valor) for r in receitas_extras)
-    total_fixas = sum(float(r.valor) for r in receitas_fixas)
-    total_entradas = sal + total_extras + total_fixas
-    total_fixas_previsto  = total_fixas
+    total_fixas_previsto = sum(float(r.valor) for r in receitas_fixas)
     total_fixas_realizado = sum(
         float(r.valor_realizado)
         for r in receitas_fixas
         if r.valor_realizado is not None
     )
-    saldo_realizado = total_fixas_realizado + total_extras - total_pago
-    saldo_previsto  = total_fixas_previsto + total_extras + sal - total_previsto
+    entrada_prevista  = total_fixas_previsto + total_extras
+    entrada_realizada = total_fixas_realizado + total_extras
     return {
-        'total_previsto': total_previsto,
-        'total_pago': total_pago,
-        'total_extras': total_extras,
-        'total_fixas': total_fixas,
-        'total_entradas': total_entradas,
-        'parcial': total_entradas - total_previsto,
-        'sobra': total_entradas - total_pago,
+        'total_previsto':        total_previsto,
+        'total_pago':            total_pago,
+        'total_extras':          total_extras,
         'total_fixas_previsto':  total_fixas_previsto,
         'total_fixas_realizado': total_fixas_realizado,
-        'saldo_realizado':       saldo_realizado,
-        'saldo_previsto':        saldo_previsto,
+        'entrada_prevista':      entrada_prevista,
+        'entrada_realizada':     entrada_realizada,
+        'saldo_previsto':        entrada_prevista - total_previsto,
+        'saldo_realizado':       entrada_realizada - total_pago,
     }
 
 
@@ -174,8 +161,6 @@ def por_mes(ano: int, mes: int):
         .order_by(Gasto.categoria_id, Gasto.descricao)
     ).all()
 
-    param = _get_or_create_parametro(mes, ano)
-
     receitas_extras = db.session.scalars(
         db.select(ReceitaExtra)
         .where(ReceitaExtra.mes == mes, ReceitaExtra.ano == ano)
@@ -188,7 +173,7 @@ def por_mes(ano: int, mes: int):
         .order_by(ReceitaFixa.descricao)
     ).all()
 
-    totais = _calcular_totais(todos_gastos, param.salario, receitas_extras, receitas_fixas)
+    totais = _calcular_totais(todos_gastos, receitas_extras, receitas_fixas)
 
     gastos_por_cat = {}
     for cat in categorias:
@@ -202,7 +187,6 @@ def por_mes(ano: int, mes: int):
 
     mes_ant, ano_ant, mes_prox, ano_prox = _nav_mes(mes, ano)
 
-    salario_form = SalarioForm(salario=param.salario)
     gasto_form = GastoForm()
     gasto_form.categoria_id.choices = [(c.id, c.nome) for c in categorias]
 
@@ -218,31 +202,17 @@ def por_mes(ano: int, mes: int):
         categorias=categorias,
         gastos_por_cat=gastos_por_cat,
         totais=totais,
-        param=param,
         receitas_extras=receitas_extras,
         receitas_fixas=receitas_fixas,
         saques=saques,
-        salario_form=salario_form,
         gasto_form=gasto_form,
         receita_form=receita_form,
-        registrar_form=RegistrarRealizadoForm(),
         hoje_mes=datetime.today().month,
         hoje_ano=datetime.today().year,
         mes_ant=mes_ant, ano_ant=ano_ant,
         mes_prox=mes_prox, ano_prox=ano_prox,
     )
 
-
-@gastos_bp.route('/<int:ano>/<int:mes>/salario', methods=['POST'])
-@login_required
-def atualizar_salario(ano: int, mes: int):
-    param = _get_or_create_parametro(mes, ano)
-    form = SalarioForm()
-    if form.validate_on_submit():
-        param.salario = form.salario.data
-        db.session.commit()
-        flash('Salário atualizado.', 'success')
-    return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
 
 
 @gastos_bp.route('/<int:ano>/<int:mes>/novo', methods=['POST'])
@@ -407,32 +377,28 @@ def excluir_receita(id: int):
     return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
 
 
-@gastos_bp.route('/<int:ano>/<int:mes>/receita-fixa/<int:id>/registrar', methods=['POST'])
+@gastos_bp.route('/receita-fixa/<int:id>/editar', methods=['GET', 'POST'])
 @login_required
-def registrar_realizado(ano: int, mes: int, id: int):
-    hoje = datetime.today()
-    if (ano * 100 + mes) > (hoje.year * 100 + hoje.month):
-        flash('Não é possível registrar realizado em mês futuro.', 'danger')
-        return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
-    receita = db.session.scalar(
-        db.select(ReceitaFixa).where(
-            ReceitaFixa.id == id,
-            ReceitaFixa.mes == mes,
-            ReceitaFixa.ano == ano,
-        )
-    )
-    if not receita:
-        flash('Lançamento não encontrado.', 'danger')
-        return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
-    form = RegistrarRealizadoForm()
+def editar_receita_fixa(id: int):
+    receita = db.get_or_404(ReceitaFixa, id)
+    form = ReceitaFixaEditForm(obj=receita)
     if form.validate_on_submit():
-        receita.valor_realizado = form.valor_realizado.data
+        receita.valor = form.valor.data
+        receita.valor_realizado = form.valor_realizado.data if form.valor_realizado.data is not None else None
         db.session.commit()
-        flash(f'Recebimento de "{receita.descricao}" registrado.', 'success')
-    else:
-        for erros in form.errors.values():
-            for e in erros:
-                flash(e, 'danger')
+        flash(f'Entrada "{receita.descricao}" atualizada.', 'success')
+        return redirect(url_for('gastos.por_mes', ano=receita.ano, mes=receita.mes))
+    return render_template('gastos/receita_fixa_form.html', form=form, receita=receita)
+
+
+@gastos_bp.route('/receita-fixa/<int:id>/excluir', methods=['POST'])
+@login_required
+def excluir_receita_fixa(id: int):
+    receita = db.get_or_404(ReceitaFixa, id)
+    ano, mes, descricao = receita.ano, receita.mes, receita.descricao
+    db.session.delete(receita)
+    db.session.commit()
+    flash(f'Entrada "{descricao}" removida.', 'success')
     return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
 
 

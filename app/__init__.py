@@ -21,6 +21,18 @@ def _format_brl(value) -> str:
         return '—'
 
 
+def _format_num_brl(value) -> str:
+    if value is None:
+        return ''
+    try:
+        v = float(value)
+        sign = '-' if v < 0 else ''
+        fmt = '{:,.2f}'.format(abs(v)).replace(',', 'X').replace('.', ',').replace('X', '.')
+        return f'{sign}{fmt}'
+    except (TypeError, ValueError):
+        return ''
+
+
 def _migrate_gastos():
     """Adiciona colunas novas à tabela gastos sem perder dados existentes."""
     with db.engine.connect() as conn:
@@ -209,6 +221,7 @@ def create_app(config_class=Config):
     login_manager.login_message_category = 'warning'
 
     app.jinja_env.filters['brl'] = _format_brl
+    app.jinja_env.filters['num_brl'] = _format_num_brl
     app.jinja_env.filters['float'] = float
     app.jinja_env.globals['now'] = datetime.now
     app.jinja_env.globals['enumerate'] = enumerate

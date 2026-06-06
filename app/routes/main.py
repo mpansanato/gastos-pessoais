@@ -9,7 +9,6 @@ from app.models.categoria import Categoria
 from app.models.gasto import Gasto
 from app.models.gasto_fixo import GastoFixo
 from app.models.investimento import Investimento
-from app.models.parametro_mensal import ParametroMensal
 from app.models.parametro_projecao import ParametroProjecao
 from app.models.receita_extra import ReceitaExtra
 from app.models.receita_fixa import ReceitaFixa
@@ -44,12 +43,6 @@ def dashboard():
         db.select(Gasto).where(Gasto.mes == mes, Gasto.ano == ano)
     ).all()
 
-    param_mes = db.session.scalar(
-        db.select(ParametroMensal).where(
-            ParametroMensal.mes == mes, ParametroMensal.ano == ano
-        )
-    )
-    salario = float(param_mes.salario) if param_mes else 0.0
     total_pago_mes = sum(float(g.valor_pago) for g in gastos_mes if g.valor_pago is not None)
     total_prev_mes = sum(float(g.valor_previsto) for g in gastos_mes)
 
@@ -57,8 +50,6 @@ def dashboard():
         db.select(ReceitaExtra).where(ReceitaExtra.mes == mes, ReceitaExtra.ano == ano)
     ).all()
     total_extras_mes = sum(float(r.valor) for r in receitas_extras_mes)
-    total_entradas_mes = salario + total_extras_mes
-    sobra_mes = total_entradas_mes - total_pago_mes
 
     # ── Entradas fixas do mês: previsto e realizado ─────────────────────
     receitas_fixas_mes = db.session.scalars(
@@ -70,8 +61,9 @@ def dashboard():
         for r in receitas_fixas_mes
         if r.valor_realizado is not None
     )
+    total_entradas_mes = total_extras_mes + total_fixas_previsto_mes
     saldo_realizado_mes = total_fixas_realizado_mes + total_extras_mes - total_pago_mes
-    saldo_previsto_mes  = total_fixas_previsto_mes + total_extras_mes + salario - total_prev_mes
+    saldo_previsto_mes  = total_fixas_previsto_mes + total_extras_mes - total_prev_mes
 
     # ── Patrimônio investido (mês mais recente) ─────────────────────────────
     inv_base = db.session.execute(
@@ -124,6 +116,8 @@ def dashboard():
             Investimento.vencimento.isnot(None),
             Investimento.vencimento >= hoje_date,
             Investimento.vencimento <= limite_30,
+            Investimento.mes == inv_base_mes,
+            Investimento.ano == inv_base_ano,
         )
         .order_by(Investimento.vencimento.asc())
         .limit(5)
@@ -237,10 +231,8 @@ def dashboard():
         # Cards
         mes=mes, ano=ano,
         nome_mes=MESES_ABREV[mes - 1],
-        salario=salario,
         total_pago_mes=total_pago_mes,
         total_prev_mes=total_prev_mes,
-        sobra_mes=sobra_mes,
         saldo_realizado_mes=saldo_realizado_mes,
         saldo_previsto_mes=saldo_previsto_mes,
         total_investido=total_investido,
