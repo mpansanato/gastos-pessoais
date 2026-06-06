@@ -246,7 +246,6 @@ def create_app(config_class=Config):
         _migrate_categorias()
         _migrate_receitas_fixas()
         _migrate_entradas_fixas()
-        _migrate_salario_para_entrada_fixa()
         _seed_categorias()
         _seed_categorias_extras()
         _seed_instituicoes()
