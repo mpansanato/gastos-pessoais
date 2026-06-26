@@ -73,6 +73,8 @@ def dashboard():
     ).first()
 
     total_investido = 0.0
+    total_investido_previdencia = 0.0
+    total_investido_outros = 0.0
     inv_base_mes, inv_base_ano = mes, ano
     if inv_base:
         inv_base_mes, inv_base_ano = inv_base.mes, inv_base.ano
@@ -84,6 +86,16 @@ def dashboard():
                 )
             ) or 0
         )
+        total_investido_previdencia = float(
+            db.session.scalar(
+                db.select(db.func.sum(Investimento.valor)).where(
+                    Investimento.mes == inv_base_mes,
+                    Investimento.ano == inv_base_ano,
+                    Investimento.tipo == 'Previdência Privada',
+                )
+            ) or 0
+        )
+        total_investido_outros = total_investido - total_investido_previdencia
 
     # ── Projeção 12 meses ───────────────────────────────────────────────────
     param_proj = db.session.scalar(db.select(ParametroProjecao))
@@ -236,6 +248,8 @@ def dashboard():
         saldo_realizado_mes=saldo_realizado_mes,
         saldo_previsto_mes=saldo_previsto_mes,
         total_investido=total_investido,
+        total_investido_previdencia=total_investido_previdencia,
+        total_investido_outros=total_investido_outros,
         inv_base_mes=MESES_ABREV[inv_base_mes - 1],
         inv_base_ano=inv_base_ano,
         projecao_12m=projecao_12m,

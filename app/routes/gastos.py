@@ -256,6 +256,66 @@ def novo(ano: int, mes: int):
     return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
 
 
+@gastos_bp.route('/<int:ano>/<int:mes>/simplificado')
+@login_required
+def simplificado(ano: int, mes: int):
+    if not (1 <= mes <= 12):
+        return redirect(url_for('gastos.index'))
+    categorias = db.session.scalars(
+        db.select(Categoria).order_by(Categoria.ordem, Categoria.nome)
+    ).all()
+    todos_gastos = db.session.scalars(
+        db.select(Gasto)
+        .where(Gasto.mes == mes, Gasto.ano == ano)
+        .order_by(Gasto.categoria_id, Gasto.descricao)
+    ).all()
+    mes_ant, ano_ant, mes_prox, ano_prox = _nav_mes(mes, ano)
+    return render_template(
+        'gastos/simplificado.html',
+        mes=mes, ano=ano, nome_mes=MESES[mes - 1],
+        categorias=categorias,
+        gastos=todos_gastos,
+        mes_ant=mes_ant, ano_ant=ano_ant,
+        mes_prox=mes_prox, ano_prox=ano_prox,
+    )
+
+
+@gastos_bp.route('/<int:ano>/<int:mes>/simplificado/salvar', methods=['POST'])
+@login_required
+def simplificado_salvar(ano: int, mes: int):
+    from decimal import Decimal, InvalidOperation
+
+    def parse_br(raw: str):
+        if not raw:
+            return None
+        raw = raw.strip().replace('\xa0', '').replace(' ', '')
+        if not raw:
+            return None
+        if ',' in raw:
+            raw = raw.replace('.', '').replace(',', '.')
+        try:
+            return Decimal(raw)
+        except (InvalidOperation, ValueError):
+            return None
+
+    todos_gastos = db.session.scalars(
+        db.select(Gasto).where(Gasto.mes == mes, Gasto.ano == ano)
+    ).all()
+
+    for g in todos_gastos:
+        prev_raw = request.form.get(f'previsto_{g.id}', '')
+        pago_raw = request.form.get(f'pago_{g.id}', '')
+        novo_previsto = parse_br(prev_raw)
+        novo_pago = parse_br(pago_raw)
+        if novo_previsto is not None:
+            g.valor_previsto = novo_previsto
+        g.valor_pago = novo_pago
+
+    db.session.commit()
+    flash('Gastos atualizados com sucesso.', 'success')
+    return redirect(url_for('gastos.simplificado', ano=ano, mes=mes))
+
+
 @gastos_bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar(id: int):

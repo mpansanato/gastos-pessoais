@@ -69,7 +69,17 @@
                 </div>
                 {% if tem_investimentos %}
                 <div class="fw-bold fs-5 text-primary">{{ total_investido | brl }}</div>
-                <small class="text-muted">ref. {{ inv_base_mes }}/{{ inv_base_ano }}</small>
+                <small class="text-muted d-block">ref. {{ inv_base_mes }}/{{ inv_base_ano }}</small>
+                <div class="mt-1" style="font-size:.75rem;">
+                    <div class="d-flex justify-content-between text-muted">
+                        <span><i class="bi bi-shield-check me-1"></i>Previdência</span>
+                        <span class="fw-medium">{{ total_investido_previdencia | brl }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted">
+                        <span><i class="bi bi-graph-up me-1"></i>Demais</span>
+                        <span class="fw-medium">{{ total_investido_outros | brl }}</span>
+                    </div>
+                </div>
                 {% else %}
                 <div class="fw-bold fs-5 text-muted">—</div>
                 <small class="text-muted">sem investimentos</small>

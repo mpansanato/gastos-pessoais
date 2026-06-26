@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Lançamento Rápido — {{ nome_mes }} {{ ano }}{% endblock %}
+{% block page_title %}Gastos Mensais{% endblock %}
+
+{% block content %}
+
+{# ── Navegação de meses ────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <a href="{{ url_for('gastos.simplificado', ano=ano_ant, mes=mes_ant) }}"
+       class="btn btn-outline-secondary btn-sm px-3">
+        <i class="bi bi-chevron-left"></i>
+    </a>
+    <div class="text-center">
+        <h5 class="mb-0 fw-bold">{{ nome_mes }} {{ ano }}</h5>
+        <small class="text-muted">
+            <i class="bi bi-table me-1"></i>Lançamento Rápido
+            &nbsp;·&nbsp;
+            <a href="{{ url_for('gastos.por_mes', ano=ano, mes=mes) }}" class="text-muted text-decoration-none">
+                <i class="bi bi-layout-text-window me-1"></i>Visão Completa
+            </a>
+        </small>
+    </div>
+    <a href="{{ url_for('gastos.simplificado', ano=ano_prox, mes=mes_prox) }}"
+       class="btn btn-outline-secondary btn-sm px-3">
+        <i class="bi bi-chevron-right"></i>
+    </a>
+</div>
+
+{% if not gastos %}
+<div class="card">
+    <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
+        <p class="mb-2">Nenhum gasto lançado para <strong>{{ nome_mes }} {{ ano }}</strong>.</p>
+        <a href="{{ url_for('gastos.por_mes', ano=ano, mes=mes) }}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Adicionar gastos
+        </a>
+    </div>
+</div>
+{% else %}
+<form method="POST" action="{{ url_for('gastos.simplificado_salvar', ano=ano, mes=mes) }}" id="formSimplificado">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tabelaSimplificada">
+                <thead class="table-light">
+                    <tr>
+                        <th style="min-width:220px;">Descrição</th>
+                        <th class="text-end" style="width:160px;">Previsto</th>
+                        <th class="text-end" style="width:160px;">Pago</th>
+                        <th class="text-end" style="width:160px;">Diferença</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set cat_id_atual = namespace(val=None) %}
+                    {% for g in gastos %}
+                        {% if g.categoria_id != cat_id_atual.val %}
+                            {% set cat_id_atual.val = g.categoria_id %}
+                            {% set cat = categorias | selectattr('id', 'eq', g.categoria_id) | first %}
+                            {% if cat %}
+                            <tr class="table-secondary">
+                                <td colspan="4" class="py-1 px-3">
+                                    <small class="text-uppercase fw-semibold text-muted"
+                                           style="font-size:.7rem;letter-spacing:.06em;">
+                                        <span class="d-inline-block me-1" style="width:10px;height:10px;border-radius:2px;background:{{ cat.cor }};"></span>
+                                        {{ cat.nome }}
+                                    </small>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endif %}
+                        <tr>
+                            <td class="py-2">
+                                <div class="fw-medium" style="font-size:.9rem;">{{ g.descricao }}</div>
+                                {% if g.observacao %}
+                                    <small class="text-muted">{{ g.observacao }}</small>
+                                {% endif %}
+                                {% if g.parcela_total and g.parcela_total > 1 %}
+                                    <small class="text-muted">{{ g.parcela_num }}/{{ g.parcela_total }}</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end py-2">
+                                <input type="text" name="previsto_{{ g.id }}"
+                                       class="form-control form-control-sm text-end inp-previsto"
+                                       value="{{ g.valor_previsto | num_brl }}"
+                                       style="width:130px;margin-left:auto;"
+                                       data-id="{{ g.id }}">
+                            </td>
+                            <td class="text-end py-2">
+                                <input type="text" name="pago_{{ g.id }}"
+                                       class="form-control form-control-sm text-end inp-pago"
+                                       value="{{ g.valor_pago | num_brl if g.valor_pago is not none else '' }}"
+                                       placeholder="—"
+                                       style="width:130px;margin-left:auto;"
+                                       data-id="{{ g.id }}">
+                            </td>
+                            <td class="text-end py-2">
+                                <span class="diferenca fw-medium" data-id="{{ g.id }}" style="font-size:.9rem;">
+                                    {% if g.valor_pago is not none %}
+                                        {% set dif = g.valor_previsto | float - g.valor_pago | float %}
+                                        <span class="{{ 'text-success' if dif >= 0 else 'text-danger' }}">
+                                            {{ dif | abs | round(2) | string | replace('.', ',') }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td>Total</td>
+                        <td class="text-end" id="totalPrevisto">
+                            {{ gastos | sum(attribute='valor_previsto') | float | round(2) | string | replace('.', ',') }}
+                        </td>
+                        <td class="text-end" id="totalPago">
+                            {% set total_pago = namespace(v=0) %}
+                            {% for g in gastos %}{% if g.valor_pago is not none %}{% set total_pago.v = total_pago.v + g.valor_pago | float %}{% endif %}{% endfor %}
+                            {% if total_pago.v > 0 %}{{ total_pago.v | round(2) | string | replace('.', ',') }}{% else %}—{% endif %}
+                        </td>
+                        <td class="text-end" id="totalDiferenca">—</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <a href="{{ url_for('gastos.por_mes', ano=ano, mes=mes) }}"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-layout-text-window me-1"></i>Visão Completa
+        </a>
+        <button type="submit" class="btn btn-primary px-4 fw-semibold">
+            <i class="bi bi-floppy me-1"></i>Salvar Alterações
+        </button>
+    </div>
+</form>
+{% endif %}
+
+<script>
+(function () {
+    function parseBR(val) {
+        val = val.trim().replace(/\s/g, '');
+        if (!val) return NaN;
+        if (val.includes(',')) val = val.replace(/\./g, '').replace(',', '.');
+        return parseFloat(val);
+    }
+    function fmtBR(n) {
+        return isNaN(n) ? '—' : n.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    function recalcular() {
+        let totPrev = 0, totPago = 0, temPago = false;
+
+        document.querySelectorAll('tbody tr[data-gasto-id]').forEach(function(tr) {
+            // usamos os inputs direto
+        });
+
+        // Itera por linha de dados (não separadores de categoria)
+        const rows = document.querySelectorAll('tbody tr:not(.table-secondary)');
+        rows.forEach(function (tr) {
+            const inpPrev = tr.querySelector('.inp-previsto');
+            const inpPago = tr.querySelector('.inp-pago');
+            const spanDif = tr.querySelector('.diferenca');
+            if (!inpPrev || !inpPago) return;
+
+            const prev = parseBR(inpPrev.value);
+            const pago = parseBR(inpPago.value);
+
+            if (!isNaN(prev)) totPrev += prev;
+            if (!isNaN(pago)) { totPago += pago; temPago = true; }
+
+            if (!isNaN(prev) && !isNaN(pago)) {
+                const dif = prev - pago;
+                spanDif.innerHTML = '<span class="' + (dif >= 0 ? 'text-success' : 'text-danger') + '">' + fmtBR(Math.abs(dif)) + '</span>';
+            } else {
+                spanDif.innerHTML = '<span class="text-muted">—</span>';
+            }
+        });
+
+        document.getElementById('totalPrevisto').textContent = fmtBR(totPrev);
+        document.getElementById('totalPago').textContent = temPago ? fmtBR(totPago) : '—';
+        const difTotal = totPrev - totPago;
+        const elDif = document.getElementById('totalDiferenca');
+        if (temPago) {
+            elDif.innerHTML = '<span class="' + (difTotal >= 0 ? 'text-success' : 'text-danger') + '">' + fmtBR(Math.abs(difTotal)) + '</span>';
+        } else {
+            elDif.textContent = '—';
+        }
+    }
+
+    document.querySelectorAll('.inp-previsto, .inp-pago').forEach(function (inp) {
+        inp.addEventListener('input', recalcular);
+    });
+
+    recalcular();
+})();
+</script>
+
+{% endblock %}

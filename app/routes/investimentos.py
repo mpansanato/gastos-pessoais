@@ -689,6 +689,11 @@ def por_mes(ano: int, mes: int):
     total_confirmado = sum(float(i.valor) for i in confirmados)
     total_projetado  = sum(float(i.valor) for i in projetados)
 
+    total_geral_previdencia = sum(float(i.valor) for i in todos if i.tipo == 'Previdência Privada')
+    total_geral_outros      = total_geral - total_geral_previdencia
+    total_confirmado_previdencia = sum(float(i.valor) for i in confirmados if i.tipo == 'Previdência Privada')
+    total_confirmado_outros      = total_confirmado - total_confirmado_previdencia
+
     rend_real_total = sum(float(i.rendimento_real) for i in confirmados if i.rendimento_real)
     rend_proj_total = sum(float(i.rendimento_projetado) for i in todos if i.rendimento_projetado)
 
@@ -737,6 +742,10 @@ def por_mes(ano: int, mes: int):
         total_geral=total_geral,
         total_confirmado=total_confirmado,
         total_projetado=total_projetado,
+        total_geral_previdencia=total_geral_previdencia,
+        total_geral_outros=total_geral_outros,
+        total_confirmado_previdencia=total_confirmado_previdencia,
+        total_confirmado_outros=total_confirmado_outros,
         rend_real_total=rend_real_total,
         rend_proj_total=rend_proj_total,
         qtd=len(todos),
