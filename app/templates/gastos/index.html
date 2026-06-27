@@ -64,7 +64,6 @@
         <div class="collapse mt-2" id="formSaldoConta">
             <form method="POST" action="{{ url_for('gastos.salvar_saldo_conta', ano=ano, mes=mes) }}"
                   class="d-flex align-items-center gap-2">
-                {{ csrf_token() | safe }}
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <label class="form-label mb-0 small text-muted text-nowrap">Saldo inicial (R$):</label>
                 <input type="text" name="saldo_inicial"
