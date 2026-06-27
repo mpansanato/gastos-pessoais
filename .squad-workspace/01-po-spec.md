@@ -1,152 +1,206 @@
-# Especificação Funcional — Limite Mensal por Categoria e Alertas no Dashboard
+# Especificação Funcional — Controle de Saldo da Conta Bancária
+
+**Agente:** PO  
+**Data:** 2026-06-26  
+**Status:** Aguardando validação do usuário
+
+---
+
+## Discovery — Análise da Necessidade
+
+### Contexto Identificado no Sistema
+
+Após análise do código, o sistema já possui:
+- **Entradas realizadas** (`ReceitaFixa.valor_realizado` + `ReceitaExtra.valor`)
+- **Gastos pagos** (`Gasto.valor_pago`)
+- **Saldo Realizado** calculado mensalmente = entradas realizadas − gastos pagos
+- **`ParametroMensal`** (model existente com `mes`, `ano`, `salario`) — atualmente sem uso ativo após migração para `EntradaFixa`; poderia ser reaproveitado ou estendido
+
+O que **não existe**: qualquer noção de saldo bancário real, saldo inicial de conta, ou saldo acumulado entre meses.
+
+### Perguntas Respondidas pelo Contexto
+
+| Dúvida | Interpretação adotada |
+|---|---|
+| Uma conta ou múltiplas? | Múltiplas contas são complexidade adicional; spec foca em **conta única** (conta corrente principal) |
+| Saldo inicial fixo ou carregado do mês anterior? | **Carregado automaticamente** do saldo final do mês anterior (encadeamento) |
+| Extrato ou apenas saldo? | Apenas **saldo resumido** — o extrato transacional já existe indiretamente via gastos e entradas |
+| Onde fica na tela? | Card dedicado na tela de **Gastos Mensais** (onde já estão entradas e saídas) |
 
 ---
 
 ## 1. Épico
 
-**Título:** Limites Mensais por Categoria com Alertas no Dashboard
-
-**Objetivo:** Permitir que o usuário defina um valor limite (meta de gasto) por categoria e receba alertas visuais no dashboard sempre que o total gasto em um mês ultrapassar ou se aproximar do limite definido, promovendo controle financeiro proativo.
+- **Título:** Controle de Saldo da Conta Bancária
+- **Objetivo:** Permitir que o usuário informe o saldo inicial da sua conta corrente a cada mês e visualize o saldo final estimado calculado automaticamente com base nas entradas realizadas e gastos pagos registrados no sistema — dando visibilidade real sobre o dinheiro disponível em conta a qualquer momento do mês.
 
 ---
 
 ## 2. User Stories
 
-### US-01 — Definir limite mensal por categoria
-> Como usuário autenticado, quero definir um valor limite de gasto mensal para cada categoria, para que eu possa estabelecer metas financeiras e ser avisado quando estiver próximo de excedê-las.
+### US-01 — Informar Saldo Inicial do Mês
+```
+Como usuário do sistema,
+Quero informar o saldo inicial da minha conta bancária no início de cada mês,
+Para que o sistema possa calcular o saldo final ao longo do mês com base nos lançamentos registrados.
+```
 
-### US-02 — Editar ou remover limite de uma categoria
-> Como usuário autenticado, quero editar ou remover o limite mensal de uma categoria, para que eu possa ajustar minhas metas conforme minha realidade financeira muda ao longo do tempo.
+### US-02 — Visualizar Saldo Final Calculado
+```
+Como usuário do sistema,
+Quero visualizar o saldo final da conta calculado automaticamente (saldo inicial + entradas realizadas − gastos pagos),
+Para saber quanto tenho disponível em conta a qualquer momento.
+```
 
-### US-03 — Visualizar status do limite no dashboard
-> Como usuário autenticado, quero ver no dashboard o percentual de uso do limite por categoria no mês corrente, para que eu possa acompanhar meus gastos em relação às metas definidas de forma imediata.
+### US-03 — Encadeamento Automático entre Meses
+```
+Como usuário do sistema,
+Quero que o saldo final de um mês seja sugerido automaticamente como saldo inicial do mês seguinte,
+Para não precisar informar manualmente a cada mês e manter a continuidade do histórico.
+```
 
-### US-04 — Receber alerta de estouro de limite
-> Como usuário autenticado, quero receber um alerta visual destacado no dashboard quando o total gasto em uma categoria ultrapassar o limite definido, para que eu possa tomar decisões corretivas rapidamente.
-
-### US-05 — Receber alerta de proximidade de limite
-> Como usuário autenticado, quero receber um aviso quando meu gasto em uma categoria atingir 80% do limite, para que eu possa agir preventivamente antes de estourar a meta.
+### US-04 — Edição do Saldo Inicial
+```
+Como usuário do sistema,
+Quero poder editar o saldo inicial de qualquer mês a qualquer momento,
+Para corrigir divergências entre o saldo calculado e o extrato bancário real.
+```
 
 ---
 
 ## 3. Critérios de Aceite
 
-### US-01
+### US-01 — Informar Saldo Inicial
 
-**CA-01.1**
-- Dado que estou na tela de Categorias
-- Quando acesso o formulário de edição de uma categoria
-- Então vejo um campo numérico opcional "Limite Mensal (R$)"
+```
+Dado que estou na tela de Gastos Mensais de qualquer mês
+Quando clico no ícone de edição do card "Saldo em Conta"
+Então um campo de input é exibido para digitar o saldo inicial em formato brasileiro (R$ 1.234,56)
 
-**CA-01.2**
-- Dado que preencho o campo "Limite Mensal" com valor negativo ou zero
-- Quando tento salvar
-- Então o sistema exibe "O limite mensal deve ser um valor positivo." e não salva
+Dado que informei o saldo inicial e clico em Salvar
+Quando o valor é válido (número ≥ qualquer decimal, positivo ou negativo)
+Então o saldo inicial é salvo e o card é atualizado imediatamente com o saldo final recalculado
+```
 
-**CA-01.3**
-- Dado que preencho com valor válido (ex: R$ 500,00)
-- Quando salvo
-- Então o valor é persistido e exibido na listagem
+### US-02 — Visualizar Saldo Final
 
-**CA-01.4**
-- Dado que deixo o campo "Limite Mensal" em branco
-- Quando salvo
-- Então a categoria é salva sem limite e não aparece nos alertas do dashboard
+```
+Dado que o saldo inicial foi informado para o mês
+Quando há gastos pagos e/ou entradas realizadas registrados
+Então o card exibe: Saldo Inicial + Entradas Realizadas − Gastos Pagos = Saldo Final (destacado)
 
-### US-02
+Dado que nenhum gasto foi pago e nenhuma entrada foi realizada no mês
+Quando visualizo o card
+Então o Saldo Final é igual ao Saldo Inicial
+```
 
-**CA-02.1**
-- Dado que uma categoria tem limite definido
-- Quando edito e altero o valor
-- Então o novo valor é salvo e o dashboard reflete imediatamente
+### US-03 — Encadeamento entre Meses
 
-**CA-02.2**
-- Dado que uma categoria tem limite definido
-- Quando edito e apago o campo (deixo em branco)
-- Então o limite é removido (NULL no banco) e o alerta some do dashboard
+```
+Dado que o mês anterior possui saldo final calculado
+Quando navego para o mês seguinte sem saldo inicial informado
+Então o campo de saldo inicial é pré-preenchido com o saldo final do mês anterior (como sugestão editável)
 
-### US-03
+Dado que o mês anterior não possui saldo inicial cadastrado
+Quando navego para qualquer mês
+Então o campo de saldo inicial aparece em branco, com CTA para informar
+```
 
-**CA-03.1**
-- Dado que ao menos uma categoria tem limite definido
-- Quando acesso o dashboard
-- Então vejo uma seção "Limites por Categoria" com barra de progresso para cada uma
+### US-04 — Edição do Saldo Inicial
 
-**CA-03.2**
-- Dado categoria com limite R$ 500,00 e gastos pagos R$ 250,00
-- Quando vejo o dashboard
-- Então a barra exibe 50% verde e texto "R$ 250,00 de R$ 500,00 (50%)"
+```
+Dado que já existe um saldo inicial salvo para o mês
+Quando clico no ícone de edição e altero o valor
+Então o saldo final é recalculado imediatamente com o novo valor informado
 
-**CA-03.3**
-- Dado que nenhuma categoria tem limite
-- Quando acesso o dashboard
-- Então a seção não é exibida ou mostra "Nenhum limite definido."
-
-### US-04
-
-**CA-04.1**
-- Dado categoria com limite R$ 500,00 e gastos pagos > R$ 500,00
-- Quando acesso o dashboard
-- Então barra é vermelha, badge "Limite ultrapassado" é exibido
-
-**CA-04.2**
-- Dado gastos de R$ 650,00 com limite R$ 500,00
-- Quando vejo o dashboard
-- Então texto exibe "R$ 650,00 de R$ 500,00 (130%)" e barra visual está em 100%
-
-### US-05
-
-**CA-05.1**
-- Dado categoria com limite R$ 500,00 e gastos entre R$ 400,00 e R$ 499,99
-- Quando acesso o dashboard
-- Então barra é amarela/laranja com aviso "Atenção: próximo do limite"
-
-**CA-05.2**
-- Dado percentual < 80%
-- Quando vejo a barra
-- Então é verde sem ícone de aviso
+Dado que altero o saldo inicial de um mês passado
+Quando salvo
+Então apenas aquele mês é atualizado — os meses futuros NÃO são recalculados em cascata
+```
 
 ---
 
 ## 4. Regras de Negócio
 
-- **RN-01:** Limite mensal é campo opcional da categoria. Sem limite = sem alertas.
-- **RN-02:** Limite deve ser valor decimal positivo (> 0). Zero e negativos são rejeitados.
-- **RN-03:** Limite único por categoria — parâmetro da categoria, não do mês.
-- **RN-04:** Cálculo usa somente `valor_pago` (não `valor_previsto`) dos gastos do mês.
-- **RN-05:** Dashboard usa mês corrente (hoje) para os cálculos.
-- **RN-06 Faixas de alerta:** < 80% = verde; 80%-99% = amarelo; >= 100% = vermelho.
-- **RN-07:** Barra visual limitada a 100%, mas texto exibe valor e percentual reais.
-- **RN-08:** Status calculado server-side a cada carregamento do dashboard.
-- **RN-09:** Campo `limite_mensal` (NUMERIC, nullable) adicionado ao model `Categoria`.
-- **RN-10:** Formatação monetária padrão brasileiro (R$ X.XXX,XX).
+1. **RN-01 — Model:** Criar novo model `SaldoConta` com campos: `id`, `mes` (int), `ano` (int), `saldo_inicial` (Decimal). Reaproveitamento do `ParametroMensal` foi descartado — ele é legado e não deve acumular novas responsabilidades.
+
+2. **RN-02 — Fórmula do Saldo Final:**
+   ```
+   saldo_final = saldo_inicial + total_entradas_realizadas − total_gastos_pagos
+   ```
+   Onde:
+   - `total_entradas_realizadas` = Σ `ReceitaFixa.valor_realizado` (não nulos) + Σ `ReceitaExtra.valor` do mês
+   - `total_gastos_pagos` = Σ `Gasto.valor_pago` (não nulos) do mês
+
+3. **RN-03 — Unicidade:** No máximo **um registro** de `SaldoConta` por `(mes, ano)`. Usar `get_or_create` no backend.
+
+4. **RN-04 — Encadeamento:** O saldo sugerido para o mês N é o `saldo_final` calculado do mês N-1. É uma sugestão — o usuário pode sobrescrever a qualquer momento.
+
+5. **RN-05 — Saldo inicial ausente:** Se não houver saldo inicial, o card exibe estado "não configurado" com botão/link para informar. Nunca exibir R$ 0,00 silenciosamente.
+
+6. **RN-06 — Saldo pode ser negativo:** Sem restrição de valor mínimo. Saldo negativo é exibido em vermelho.
+
+7. **RN-07 — Posicionamento:** Card "Saldo em Conta" exibido na tela de Gastos Mensais, abaixo dos cards atuais, em seção própria com destaque visual.
 
 ---
 
-## 5. Edge Cases
+## 5. Cenários de Erro e Edge Cases
 
-- **EC-01:** Categoria com limite mas sem gastos → 0%, verde, sem alertas.
-- **EC-02:** Todos gastos sem `valor_pago` → total = R$ 0,00, sem alertas.
-- **EC-03:** Limite removido de categoria estourada → alerta some no próximo carregamento.
-- **EC-04:** Limite alterado para menor que total já pago → estouro exibido imediatamente.
-- **EC-05:** Múltiplos gastos → soma correta de todos os `valor_pago` não nulos.
-- **EC-06:** Categoria excluída → limite excluído junto (cascade).
-
----
-
-## 6. Fora do Escopo
-
-- Limite por mês/ano específico (parâmetro fixo da categoria)
-- Notificações push ou e-mail
-- Alertas baseados em `valor_previsto`
-- Histórico de ultrapassagens
-- Percentual de atenção configurável pelo usuário (fixo em 80%)
-- Relatórios de limite
+| Cenário | Comportamento Esperado |
+|---|---|
+| Valor não numérico informado (ex: "abc") | Flash de erro, valor não salvo, campo mantém valor anterior |
+| Campo vazio ao salvar | Flash de aviso "Informe um valor válido" |
+| Mês sem nenhum lançamento | Saldo Final = Saldo Inicial (exibido normalmente) |
+| Mês anterior sem saldo cadastrado | Campo aparece em branco, sem sugestão automática |
+| Saldo final negativo | Valor exibido em vermelho para destaque visual |
+| Usuário salva o mesmo valor que já estava | Sistema aceita normalmente (sem erro) |
+| Primeiro mês de uso do sistema | Não há saldo anterior — usuário informa manualmente |
 
 ---
 
-## 7. Perguntas em Aberto (assumindo defaults razoáveis)
+## 6. Proposta de Interface (Wireframe Textual)
 
-- **P-01:** Comportamento igual para categorias fixas e variáveis (assumido: sim)
-- **P-03:** Bloco adicionado no dashboard principal, abaixo dos cards existentes
-- **P-07:** Coluna de limite exibida na listagem de categorias (assumido: sim)
+```
+┌─────────────────────────────────────────────────────────────┐
+│  💳  Saldo em Conta — Junho 2026                       ✏️   │
+├──────────────────┬────────────────────┬─────────────────────┤
+│  Saldo Inicial   │  + Entradas        │  − Gastos Pagos     │
+│  R$ 5.000,00     │  R$ 22.305,27      │  R$ 1.973,00        │
+├──────────────────┴────────────────────┴─────────────────────┤
+│              💰 Saldo Final: R$ 25.332,27                   │
+│                      (em destaque verde)                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 7. Fora do Escopo
+
+- **Múltiplas contas bancárias** (ex: Itaú, XP, Nubank separados por conta)
+- **Extrato transacional** (listagem de cada débito/crédito com data)
+- **Integração com Open Banking** (importação automática de extrato)
+- **Conciliação bancária** (comparar lançamentos do sistema com extrato real)
+- **Propagação em cascata** (alterar saldo de Jan não recalcula Fev, Mar automaticamente)
+- **Saldo por categoria ou investimento**
+
+---
+
+## 8. Perguntas em Aberto
+
+> Estas perguntas precisam ser respondidas **pelo usuário** antes do desenvolvimento iniciar:
+
+**P1 — Conta única ou múltiplas?**
+A spec atual assume uma única conta corrente. Se você controla Itaú + Nubank separadamente e quer ver cada uma, o escopo muda significativamente. Responda: *"conta única"* ou *"múltiplas contas"*.
+
+**P2 — Saldo inicial do primeiro mês:**
+Como quer começar? Informa manualmente o saldo atual da conta no mês de início, e daí em diante o sistema encadeia automaticamente?
+
+**P3 — Encadeamento automático:**
+Quer que o saldo final de um mês seja sugerido como inicial do próximo? Ou prefere informar manualmente todo mês para ter controle total?
+
+**P4 — Posicionamento do card:**
+O card de Saldo em Conta deve ficar: (a) logo abaixo dos 5 cards atuais na tela de Gastos Mensais, ou (b) em uma seção separada / destaque maior na página?
+
+---
+
+*Especificação produzida pelo Agente PO — SQUAD Agêntica | gastos-pessoais*
