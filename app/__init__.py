@@ -7,6 +7,7 @@ from sqlalchemy import text
 from config import Config
 from app.extensions import db, login_manager, csrf
 from app.models.parcela_entrada_fixa import ParcelaEntradaFixa
+from app.models.saldo_conta import SaldoConta  # noqa: F401 — garante create_all
 
 
 def _format_brl(value) -> str:

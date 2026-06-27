@@ -15,6 +15,7 @@ from app.models.instituicao import Instituicao
 from app.models.parametro_mensal import ParametroMensal
 from app.models.receita_extra import ReceitaExtra
 from app.models.receita_fixa import ReceitaFixa
+from app.models.saldo_conta import SaldoConta
 
 gastos_bp = Blueprint('gastos', __name__, url_prefix='/gastos')
 
@@ -175,6 +176,13 @@ def por_mes(ano: int, mes: int):
 
     totais = _calcular_totais(todos_gastos, receitas_extras, receitas_fixas)
 
+    saldo_conta = db.session.scalar(
+        db.select(SaldoConta).where(SaldoConta.mes == mes, SaldoConta.ano == ano)
+    )
+    saldo_final_conta = None
+    if saldo_conta:
+        saldo_final_conta = float(saldo_conta.saldo_inicial) + totais['entrada_realizada'] - totais['total_pago']
+
     gastos_por_cat = {}
     for cat in categorias:
         lancamentos = [g for g in todos_gastos if g.categoria_id == cat.id]
@@ -211,6 +219,8 @@ def por_mes(ano: int, mes: int):
         hoje_ano=datetime.today().year,
         mes_ant=mes_ant, ano_ant=ano_ant,
         mes_prox=mes_prox, ano_prox=ano_prox,
+        saldo_conta=saldo_conta,
+        saldo_final_conta=saldo_final_conta,
     )
 
 
@@ -253,6 +263,32 @@ def novo(ano: int, mes: int):
         for erros in form.errors.values():
             for e in erros:
                 flash(e, 'danger')
+    return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
+
+
+@gastos_bp.route('/<int:ano>/<int:mes>/saldo', methods=['POST'])
+@login_required
+def salvar_saldo_conta(ano: int, mes: int):
+    from decimal import Decimal, InvalidOperation
+    raw = request.form.get('saldo_inicial', '').strip().replace('\xa0', '').replace(' ', '')
+    if raw:
+        if ',' in raw:
+            raw = raw.replace('.', '').replace(',', '.')
+        try:
+            valor = Decimal(raw)
+            saldo = db.session.scalar(
+                db.select(SaldoConta).where(SaldoConta.mes == mes, SaldoConta.ano == ano)
+            )
+            if saldo:
+                saldo.saldo_inicial = valor
+            else:
+                db.session.add(SaldoConta(mes=mes, ano=ano, saldo_inicial=valor))
+            db.session.commit()
+            flash('Saldo inicial atualizado.', 'success')
+        except (InvalidOperation, ValueError):
+            flash('Valor inválido. Use o formato 1.234,56.', 'danger')
+    else:
+        flash('Informe um valor válido.', 'warning')
     return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
 
 

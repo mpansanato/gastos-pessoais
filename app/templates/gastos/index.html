@@ -35,6 +35,49 @@
     </a>
 </div>
 
+{# ── Saldo em Conta ─────────────────────────────────────────────────────── #}
+<div class="card mb-3">
+    <div class="card-body py-2 px-3">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <span class="text-muted small fw-semibold text-uppercase" style="font-size:.7rem;letter-spacing:.06em;">
+                <i class="bi bi-bank2 me-1"></i>Saldo Itaú
+            </span>
+            {% if saldo_conta %}
+                <span class="small text-muted">Inicial: <strong>{{ saldo_conta.saldo_inicial | brl }}</strong></span>
+                <span class="small text-muted">+ Recebido: <strong class="text-success">{{ totais.entrada_realizada | brl }}</strong></span>
+                <span class="small text-muted">− Pago: <strong class="text-danger">{{ totais.total_pago | brl }}</strong></span>
+                <span class="small fw-bold {% if saldo_final_conta >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    = {{ saldo_final_conta | brl }}
+                </span>
+                <button class="btn btn-link btn-sm p-0 ms-auto text-muted" style="font-size:.8rem;"
+                        data-bs-toggle="collapse" data-bs-target="#formSaldoConta" title="Editar saldo inicial">
+                    <i class="bi bi-pencil"></i>
+                </button>
+            {% else %}
+                <span class="text-muted small">Saldo inicial não informado.</span>
+                <button class="btn btn-link btn-sm p-0 ms-auto text-primary" style="font-size:.8rem;"
+                        data-bs-toggle="collapse" data-bs-target="#formSaldoConta">
+                    <i class="bi bi-plus-circle me-1"></i>Informar saldo
+                </button>
+            {% endif %}
+        </div>
+        <div class="collapse mt-2" id="formSaldoConta">
+            <form method="POST" action="{{ url_for('gastos.salvar_saldo_conta', ano=ano, mes=mes) }}"
+                  class="d-flex align-items-center gap-2">
+                {{ csrf_token() | safe }}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label class="form-label mb-0 small text-muted text-nowrap">Saldo inicial (R$):</label>
+                <input type="text" name="saldo_inicial"
+                       class="form-control form-control-sm"
+                       style="max-width:160px;"
+                       value="{{ saldo_conta.saldo_inicial | num_brl if saldo_conta else '' }}"
+                       placeholder="0,00">
+                <button type="submit" class="btn btn-primary btn-sm px-3">Salvar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
 {# ── Cards de resumo ────────────────────────────────────────────────────── #}
 <div class="row row-cols-2 row-cols-md-5 g-3 mb-4">
 
