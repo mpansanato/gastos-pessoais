@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv/Scripts/python -c \"from app import create_app; app = create_app\\(\\); print\\('OK'\\)\")",
+      "Bash(cmd /c \"taskkill /PID 42152 /F\")",
+      "Bash(git commit -m ' *)",
+      "Bash(findstr :5000)",
+      "Bash(./venv/Scripts/python run.py)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"C:\\Users\\mpans\\OneDrive\\Documentos\\GitHub\\gastos-pessoais\\.claude\\hooks\\auto-commit.ps1\""
+          }
+        ]
+      }
+    ]
+  }
+}
