@@ -75,19 +75,29 @@ def index():
         os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'banco.db'
     )
     stats['db_kb'] = round(os.path.getsize(db_path) / 1024, 1) if os.path.exists(db_path) else 0
+
+    # Info do backup automático
+    from backup import ultimo_backup
+    _, quando, total_bk = ultimo_backup()
+    stats['ultimo_backup'] = quando.strftime('%d/%m/%Y %H:%M') if quando else None
+    stats['total_backups'] = total_bk
+
     return render_template('dados/index.html', stats=stats)
 
 
 @dados_bp.route('/backup')
 @login_required
 def backup():
-    """Download direto do arquivo banco.db."""
-    db_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'banco.db'
-    )
+    """Gera um snapshot consistente do banco (também guardado em backups/) e faz o download."""
+    from backup import fazer_backup
+    destino = fazer_backup()
+    if not destino:
+        flash('Banco de dados não encontrado.', 'danger')
+        return redirect(url_for('dados.index'))
+
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     return send_file(
-        db_path,
+        destino,
         as_attachment=True,
         download_name=f'backup_gastos_{timestamp}.db',
         mimetype='application/octet-stream',

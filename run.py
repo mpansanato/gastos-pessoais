@@ -21,6 +21,16 @@ if __name__ == '__main__':
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(cert_file, key_file)
 
+    # Backup automático a cada inicialização (snapshot consistente + rotação).
+    # Nunca impede o app de subir se algo falhar.
+    try:
+        from backup import fazer_backup
+        destino = fazer_backup()
+        if destino:
+            print(f'  [backup] snapshot criado: {os.path.basename(destino)}')
+    except Exception as e:  # pragma: no cover
+        print(f'  [backup] aviso: falha ao gerar snapshot ({e})')
+
     print()
     print('  ========================================')
     print('       Gastos Pessoais - Local')

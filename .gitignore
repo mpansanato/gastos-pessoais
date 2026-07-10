@@ -1,5 +1,6 @@
 venv/
 data/
+backups/
 certs/
 .env
 __pycache__/
