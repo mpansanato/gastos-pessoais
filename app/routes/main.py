@@ -65,9 +65,15 @@ def dashboard():
     saldo_realizado_mes = total_fixas_realizado_mes + total_extras_mes - total_pago_mes
     saldo_previsto_mes  = total_fixas_previsto_mes + total_extras_mes - total_prev_mes
 
-    # ── Patrimônio investido (mês mais recente) ─────────────────────────────
+    # ── Patrimônio investido (mês atual / mais recente não-futuro) ──────────
+    # Restringe a meses <= atual para não exibir projeções futuras como
+    # "Total Investido" — mantém o card idêntico à tela de Investimentos.
     inv_base = db.session.execute(
         db.select(Investimento.ano, Investimento.mes)
+        .where(db.or_(
+            Investimento.ano < ano,
+            db.and_(Investimento.ano == ano, Investimento.mes <= mes),
+        ))
         .order_by(Investimento.ano.desc(), Investimento.mes.desc())
         .limit(1)
     ).first()
