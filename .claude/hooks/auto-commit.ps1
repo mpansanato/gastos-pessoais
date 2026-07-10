@@ -56,12 +56,3 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "[hook] ✅ Commit e push realizados com sucesso!"
 Write-Host "[hook] Mensagem: $mensagem"
-
-# Popup de notificacao
-Add-Type -AssemblyName System.Windows.Forms
-[System.Windows.Forms.MessageBox]::Show(
-    "✅ Commit e push realizados com sucesso!`n`n$mensagem",
-    "Git Auto-Commit — Gastos Pessoais",
-    [System.Windows.Forms.MessageBoxButtons]::OK,
-    [System.Windows.Forms.MessageBoxIcon]::Information
-)
