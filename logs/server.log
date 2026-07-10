@@ -290,3 +290,13 @@ Press CTRL+C to quit
 127.0.0.1 - - [02/Jul/2026 15:11:05] "POST /auth/login HTTP/1.1" 302 -
 127.0.0.1 - - [02/Jul/2026 15:11:05] "GET /dashboard HTTP/1.1" 200 -
 127.0.0.1 - - [02/Jul/2026 15:11:05] "GET /static/css/style.css HTTP/1.1" 304 -
+127.0.0.1 - - [10/Jul/2026 10:18:02] "GET /dashboard HTTP/1.1" 302 -
+127.0.0.1 - - [10/Jul/2026 10:18:02] "GET /auth/login?next=/dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2026 10:18:02] "GET /static/css/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2026 10:18:03] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2026 10:18:10] "POST /auth/login HTTP/1.1" 302 -
+127.0.0.1 - - [10/Jul/2026 10:18:10] "GET /dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2026 10:18:10] "GET /static/css/style.css HTTP/1.1" 304 -
+127.0.0.1 - - [10/Jul/2026 10:18:20] "GET /investimentos/ HTTP/1.1" 302 -
+127.0.0.1 - - [10/Jul/2026 10:18:20] "GET /investimentos/2026/7 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2026 10:18:20] "GET /static/css/style.css HTTP/1.1" 304 -

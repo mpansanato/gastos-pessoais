@@ -69,15 +69,19 @@
                 </div>
                 {% if tem_investimentos %}
                 <div class="fw-bold fs-5 text-primary">{{ total_investido | brl }}</div>
-                <small class="text-muted d-block">ref. {{ inv_base_mes }}/{{ inv_base_ano }}</small>
-                <div class="mt-1" style="font-size:.75rem;">
-                    <div class="d-flex justify-content-between text-muted">
-                        <span><i class="bi bi-shield-check me-1"></i>Previdência</span>
-                        <span class="fw-medium">{{ total_investido_previdencia | brl }}</span>
+                <small class="text-muted d-block mb-2">ref. {{ inv_base_mes }}/{{ inv_base_ano }}</small>
+                <div class="row g-2 pt-2 border-top">
+                    <div class="col-6">
+                        <div class="text-muted d-flex align-items-center gap-1" style="font-size:.7rem;">
+                            <i class="bi bi-graph-up text-success"></i>Demais
+                        </div>
+                        <div class="fw-semibold text-success" style="font-size:.9rem;">{{ total_investido_outros | brl }}</div>
                     </div>
-                    <div class="d-flex justify-content-between text-muted">
-                        <span><i class="bi bi-graph-up me-1"></i>Demais</span>
-                        <span class="fw-medium">{{ total_investido_outros | brl }}</span>
+                    <div class="col-6 border-start">
+                        <div class="text-muted d-flex align-items-center gap-1" style="font-size:.7rem;">
+                            <i class="bi bi-shield-check text-info"></i>Previdência
+                        </div>
+                        <div class="fw-semibold text-info" style="font-size:.9rem;">{{ total_investido_previdencia | brl }}</div>
                     </div>
                 </div>
                 {% else %}

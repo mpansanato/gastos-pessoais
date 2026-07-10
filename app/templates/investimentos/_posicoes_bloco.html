@@ -1,0 +1,164 @@
+{# ── Bloco de Posições ─────────────────────────────────────────────────────
+   Contexto esperado (via {% with %}):
+     por_inst          — dict {instituicao: {lancamentos, subtotal, percentual}}
+     bloco_titulo      — título do bloco
+     bloco_icone       — classe do ícone bootstrap (ex: 'bi-shield-check')
+     bloco_cor         — classe de cor (ex: 'text-info')
+     bloco_key         — chave única do bloco ('prev' / 'outros') p/ data-inst
+     total_bloco       — total do bloco
+     rend_proj_bloco   — rendimento projetado do bloco
+     rend_real_bloco   — rendimento real do bloco
+   Compartilhados: retiradas_por_base, eh_passado, eh_atual
+#}
+<div class="d-flex justify-content-between align-items-center mb-2 mt-4">
+    <h6 class="text-uppercase fw-semibold mb-0 {{ bloco_cor }}" style="font-size:.72rem;letter-spacing:.08em;">
+        <i class="bi {{ bloco_icone }} me-1"></i>{{ bloco_titulo }}
+    </h6>
+    <span class="fw-bold {{ bloco_cor }}">{{ total_bloco | brl }}</span>
+</div>
+
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th class="text-end" style="min-width:130px">Saldo</th>
+                    <th class="text-end" style="min-width:120px">Rend. Proj.</th>
+                    <th class="text-end" style="min-width:120px">Rend. Real</th>
+                    <th class="text-end" style="min-width:60px">%</th>
+                    <th style="width:90px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inst, dados in por_inst.items() %}
+                <tr style="background:#f8f9fa;" class="inst-header" data-inst="{{ bloco_key }}-{{ inst.id }}">
+                    <td colspan="4" class="fw-semibold py-2">
+                        <span class="badge me-2" style="background-color:{{ inst.cor }};">
+                            <i class="bi bi-bank"></i>
+                        </span>
+                        {{ inst.nome }}
+                    </td>
+                    <td class="text-end fw-semibold">{{ dados.subtotal | brl }}</td>
+                    <td class="text-end text-muted small">{{ '%.1f'|format(dados.percentual) }}%</td>
+                    <td></td>
+                </tr>
+
+                {% for inv in dados.lancamentos %}
+                <tr class="inv-row" data-nome="{{ inv.nome | lower }}" data-inst="{{ bloco_key }}-{{ inst.id }}">
+                    <td>
+                        <span>{{ inv.nome }}</span>
+                        {% if not inv.investimento_base_id %}
+                            <span class="badge bg-secondary bg-opacity-50 ms-1 fw-normal" style="font-size:.6rem;">legado</span>
+                        {% elif inv.confirmado %}
+                            <span class="badge bg-success bg-opacity-75 ms-1 fw-normal" style="font-size:.6rem;">
+                                <i class="bi bi-check"></i> confirmado
+                            </span>
+                        {% else %}
+                            <span class="badge bg-primary bg-opacity-75 ms-1 fw-normal" style="font-size:.6rem;">
+                                <i class="bi bi-graph-up"></i> projetado
+                            </span>
+                        {% endif %}
+                        {% if inv.observacao %}
+                            <small class="text-muted d-block">{{ inv.observacao }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary bg-opacity-75 fw-normal">{{ inv.tipo }}</span>
+                        <span class="badge ms-1 fw-normal
+                            {% if inv.risco == 'alto' %}bg-danger
+                            {% elif inv.risco == 'medio' %}bg-warning text-dark
+                            {% else %}bg-success{% endif %}">
+                            {{ {'baixo':'Baixo','medio':'Médio','alto':'Alto'}[inv.risco] }}
+                        </span>
+                    </td>
+                    <td class="text-end fw-semibold">{{ inv.valor | brl }}</td>
+                    <td class="text-end text-muted small">
+                        {% if inv.rendimento_projetado is not none %}
+                            {{ inv.rendimento_projetado | brl }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="text-end small">
+                        {% if inv.confirmado and inv.rendimento_real is not none %}
+                            {% set delta = inv.rendimento_real | float - (inv.rendimento_projetado | float if inv.rendimento_projetado else 0) %}
+                            <span class="fw-semibold {{ 'text-success' if inv.rendimento_real | float >= 0 else 'text-danger' }}">
+                                {{ inv.rendimento_real | brl }}
+                            </span>
+                            {% if inv.rendimento_projetado %}
+                            <small class="d-block {{ 'text-success' if delta >= 0 else 'text-danger' }}">
+                                {{ '+' if delta >= 0 else '' }}{{ delta | brl }}
+                            </small>
+                            {% endif %}
+                            {% if inv.retirada %}
+                            <small class="d-block text-warning">
+                                <i class="bi bi-arrow-up-circle"></i> retirada: {{ inv.retirada | brl }}
+                            </small>
+                            {% endif %}
+                        {% elif inv.confirmado %}
+                            <span class="text-muted">—</span>
+                        {% else %}
+                            <span class="text-muted fst-italic" style="font-size:.7rem;">aguardando</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end text-muted small">
+                        {{ '%.1f'|format(inv.valor|float / total_bloco * 100 if total_bloco else 0) }}%
+                    </td>
+                    <td class="text-end">
+                        {% if inv.investimento_base_id and (eh_passado or eh_atual) %}
+                            <button class="btn btn-sm btn-outline-warning py-0 px-2 me-1"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalRetirada{{ inv.investimento_base_id }}"
+                                    title="Registrar retirada">
+                                <i class="bi bi-arrow-up-circle" style="font-size:.8rem;"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success py-0 px-2"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalConfirmar{{ inv.id }}"
+                                    title="{{ 'Atualizar saldo final' if inv.confirmado else 'Confirmar saldo final' }}">
+                                <i class="bi bi-check2" style="font-size:.8rem;"></i>
+                            </button>
+                        {% elif inv.confirmado %}
+                        <span class="text-success" title="Confirmado"><i class="bi bi-check-circle-fill"></i></span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {# Sub-linha de retiradas do mês #}
+                {% if inv.investimento_base_id and retiradas_por_base.get(inv.investimento_base_id) %}
+                <tr class="border-0 inv-sub" data-inst="{{ bloco_key }}-{{ inst.id }}">
+                    <td colspan="7" class="pt-0 pb-2 border-0 ps-3">
+                        {% for r in retiradas_por_base[inv.investimento_base_id] %}
+                        <span class="badge bg-warning text-dark fw-normal me-1" style="font-size:.68rem;">
+                            <i class="bi bi-arrow-up-circle me-1"></i>
+                            Retirada{% if r.data %} {{ r.data.strftime('%d/%m') }}{% endif %}:
+                            {{ r.valor | brl }}
+                            {% if r.descricao %} — {{ r.descricao }}{% endif %}
+                            <form method="POST" action="{{ url_for('investimentos.excluir_retirada', id=r.id) }}"
+                                  class="d-inline ms-1"
+                                  onsubmit="return confirm('Remover esta retirada?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-link p-0 text-dark" style="font-size:.65rem;">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </form>
+                        </span>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="table-dark">
+                    <td colspan="2" class="fw-bold">Total {{ bloco_titulo }}</td>
+                    <td class="text-end fw-bold">{{ total_bloco | brl }}</td>
+                    <td class="text-end fw-bold">{{ rend_proj_bloco | brl }}</td>
+                    <td class="text-end fw-bold">{{ rend_real_bloco | brl }}</td>
+                    <td class="text-end fw-bold">100%</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
