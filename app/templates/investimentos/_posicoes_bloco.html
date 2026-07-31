@@ -8,7 +8,7 @@
      total_bloco       — total do bloco
      rend_proj_bloco   — rendimento projetado do bloco
      rend_real_bloco   — rendimento real do bloco
-   Compartilhados: retiradas_por_base, eh_passado, eh_atual
+   Compartilhados: retiradas_por_base, eh_editavel
 #}
 <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
     <h6 class="text-uppercase fw-semibold mb-0 {{ bloco_cor }}" style="font-size:.72rem;letter-spacing:.08em;">
@@ -105,7 +105,7 @@
                         {{ '%.1f'|format(inv.valor|float / total_bloco * 100 if total_bloco else 0) }}%
                     </td>
                     <td class="text-end">
-                        {% if inv.investimento_base_id and (eh_passado or eh_atual) %}
+                        {% if inv.investimento_base_id and eh_editavel %}
                             <button class="btn btn-sm btn-outline-warning py-0 px-2 me-1"
                                     data-bs-toggle="modal"
                                     data-bs-target="#modalRetirada{{ inv.investimento_base_id }}"

@@ -195,7 +195,7 @@
 {% for inv in todos_base %}
 
 {# Modal: Confirmar saldo final #}
-{% if eh_passado or eh_atual %}
+{% if eh_editavel %}
 <div class="modal fade" id="modalConfirmar{{ inv.id }}" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
@@ -245,7 +245,7 @@
 {% endif %}
 
 {# Modal: Nova retirada #}
-{% if eh_passado or eh_atual %}
+{% if eh_editavel %}
 <div class="modal fade" id="modalRetirada{{ inv.investimento_base_id }}" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">

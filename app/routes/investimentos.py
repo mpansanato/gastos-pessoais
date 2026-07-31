@@ -748,6 +748,10 @@ def por_mes(ano: int, mes: int):
     retirada_form = RetiradaForm()
     eh_passado    = (ano, mes) <= (hoje.year, hoje.month)
     eh_atual      = (ano == hoje.year and mes == hoje.month)
+    # Edição liberada para passado, mês corrente e o próximo mês (permite lançar
+    # o mês seguinte na virada, ex.: lançar Agosto ainda em 31/07).
+    prox_m, prox_a = _prox(hoje.month, hoje.year)
+    eh_editavel   = (ano, mes) <= (prox_a, prox_m)
 
     param = db.session.scalar(db.select(ParametroProjecao))
     taxa_form = TaxaForm(
@@ -784,6 +788,7 @@ def por_mes(ano: int, mes: int):
         param=param,
         eh_passado=eh_passado,
         eh_atual=eh_atual,
+        eh_editavel=eh_editavel,
         mes_ant=mes_ant, ano_ant=ano_ant,
         mes_prox=mes_prox, ano_prox=ano_prox,
     )
