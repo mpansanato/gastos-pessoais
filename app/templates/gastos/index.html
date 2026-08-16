@@ -466,15 +466,16 @@
                             <label class="form-label fw-medium small">Valor Previsto *</label>
                             {{ gasto_form.valor_previsto(class="form-control", placeholder="0,00") }}
                         </div>
+                        <div class="col-auto px-1 d-flex flex-column">
+                            <label class="form-label fw-medium small" aria-hidden="true" style="visibility:hidden;">&nbsp;</label>
+                            <button type="button" class="btn btn-outline-secondary" id="btnCopiarPrevistoNovo"
+                                    title="Copiar o Valor Previsto para o Valor Pago">
+                                <i class="bi bi-arrow-right-short"></i>
+                            </button>
+                        </div>
                         <div class="col">
                             <label class="form-label fw-medium small">Valor Pago</label>
-                            <div class="input-group input-group-sm">
-                                {{ gasto_form.valor_pago(class="form-control", placeholder="Vazio = não pago") }}
-                                <button type="button" class="btn btn-outline-secondary" id="btnCopiarPrevistoNovo"
-                                        title="Copiar o Valor Previsto para o Valor Pago">
-                                    <i class="bi bi-arrow-right-short"></i>
-                                </button>
-                            </div>
+                            {{ gasto_form.valor_pago(class="form-control", placeholder="Vazio = não pago") }}
                         </div>
                     </div>
 
