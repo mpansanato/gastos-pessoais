@@ -60,6 +60,11 @@
                                 <i class="bi bi-graph-up"></i> projetado
                             </span>
                         {% endif %}
+                        {% if inv.investimento_base_id and retiradas_por_base.get(inv.investimento_base_id) %}
+                            <span class="badge bg-warning text-dark ms-1 fw-semibold" style="font-size:.6rem;">
+                                <i class="bi bi-arrow-up-circle-fill"></i> retirada
+                            </span>
+                        {% endif %}
                         {% if inv.observacao %}
                             <small class="text-muted d-block">{{ inv.observacao }}</small>
                         {% endif %}
@@ -125,24 +130,33 @@
                 </tr>
                 {# Sub-linha de retiradas do mês #}
                 {% if inv.investimento_base_id and retiradas_por_base.get(inv.investimento_base_id) %}
-                <tr class="border-0 inv-sub" data-inst="{{ bloco_key }}-{{ inst.id }}">
-                    <td colspan="7" class="pt-0 pb-2 border-0 ps-3">
-                        {% for r in retiradas_por_base[inv.investimento_base_id] %}
-                        <span class="badge bg-warning text-dark fw-normal me-1" style="font-size:.68rem;">
-                            <i class="bi bi-arrow-up-circle me-1"></i>
-                            Retirada{% if r.data %} {{ r.data.strftime('%d/%m') }}{% endif %}:
-                            {{ r.valor | brl }}
+                {% set rets = retiradas_por_base[inv.investimento_base_id] %}
+                <tr class="inv-sub" data-inst="{{ bloco_key }}-{{ inst.id }}">
+                    <td colspan="7" class="py-2 ps-4"
+                        style="background:#fff8e6;border-left:3px solid #ffc107;">
+                        <span class="fw-semibold text-uppercase me-2"
+                              style="font-size:.66rem;letter-spacing:.05em;color:#997404;">
+                            <i class="bi bi-arrow-up-circle-fill me-1"></i>Retirada{{ 's' if rets | length > 1 else '' }} do mês
+                        </span>
+                        {% for r in rets %}
+                        <span class="badge bg-warning text-dark fw-semibold me-1" style="font-size:.72rem;">
+                            {% if r.data %}{{ r.data.strftime('%d/%m') }}: {% endif %}{{ r.valor | brl }}
                             {% if r.descricao %} — {{ r.descricao }}{% endif %}
                             <form method="POST" action="{{ url_for('investimentos.excluir_retirada', id=r.id) }}"
                                   class="d-inline ms-1"
                                   onsubmit="return confirm('Remover esta retirada?')">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-link p-0 text-dark" style="font-size:.65rem;">
-                                    <i class="bi bi-x"></i>
+                                <button type="submit" class="btn btn-link p-0 text-dark lh-1" style="font-size:.75rem;vertical-align:-1px;">
+                                    <i class="bi bi-x-circle"></i>
                                 </button>
                             </form>
                         </span>
                         {% endfor %}
+                        {% if rets | length > 1 %}
+                        <span class="ms-1 fw-bold" style="font-size:.72rem;color:#997404;">
+                            Total: {{ rets | sum(attribute='valor') | float | brl }}
+                        </span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endif %}
