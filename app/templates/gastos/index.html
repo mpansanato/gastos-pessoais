@@ -468,7 +468,13 @@
                         </div>
                         <div class="col">
                             <label class="form-label fw-medium small">Valor Pago</label>
-                            {{ gasto_form.valor_pago(class="form-control", placeholder="Vazio = não pago") }}
+                            <div class="input-group input-group-sm">
+                                {{ gasto_form.valor_pago(class="form-control", placeholder="Vazio = não pago") }}
+                                <button type="button" class="btn btn-outline-secondary" id="btnCopiarPrevistoNovo"
+                                        title="Copiar o Valor Previsto para o Valor Pago">
+                                    <i class="bi bi-arrow-left-short"></i>=
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -571,6 +577,13 @@ document.getElementById('parcelasSelect')?.addEventListener('change', function (
     const n = parseInt(this.value, 10);
     info.style.display = n > 1 ? '' : 'none';
     hint.textContent = n > 1 ? `— lançará ${n} meses consecutivos` : '';
+});
+
+// Copiar Valor Previsto → Valor Pago no modal Novo Gasto
+document.getElementById('btnCopiarPrevistoNovo')?.addEventListener('click', function () {
+    const prev = document.getElementById('valor_previsto');
+    const pago = document.getElementById('valor_pago');
+    if (prev && pago) { pago.value = prev.value; pago.focus(); }
 });
 </script>
 {% endblock %}

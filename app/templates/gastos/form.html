@@ -40,9 +40,15 @@
                         </div>
                         <div class="col">
                             <label class="form-label fw-medium">Valor Pago</label>
-                            {{ form.valor_pago(class="form-control" + (" is-invalid" if form.valor_pago.errors else ""), placeholder="Vazio = não pago") }}
+                            <div class="input-group">
+                                {{ form.valor_pago(class="form-control" + (" is-invalid" if form.valor_pago.errors else ""), placeholder="Vazio = não pago") }}
+                                <button type="button" class="btn btn-outline-secondary" id="btnCopiarPrevisto"
+                                        title="Copiar o Valor Previsto para o Valor Pago">
+                                    <i class="bi bi-arrow-left-short"></i>= previsto
+                                </button>
+                            </div>
                             {% for e in form.valor_pago.errors %}
-                                <div class="invalid-feedback">{{ e }}</div>
+                                <div class="invalid-feedback d-block">{{ e }}</div>
                             {% endfor %}
                         </div>
                     </div>
@@ -94,6 +100,13 @@ document.getElementById('parcelasSelectEdit')?.addEventListener('change', functi
     const n = parseInt(this.value, 10);
     if (n > 1) { qtd.textContent = n; info.style.display = ''; }
     else        { info.style.display = 'none'; }
+});
+
+// Copiar Valor Previsto → Valor Pago
+document.getElementById('btnCopiarPrevisto')?.addEventListener('click', function () {
+    const prev = document.getElementById('valor_previsto');
+    const pago = document.getElementById('valor_pago');
+    if (prev && pago) { pago.value = prev.value; pago.focus(); }
 });
 </script>
 {% endblock %}
