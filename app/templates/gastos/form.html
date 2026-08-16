@@ -38,17 +38,18 @@
                                 <div class="invalid-feedback">{{ e }}</div>
                             {% endfor %}
                         </div>
+                        <div class="col-auto px-1 d-flex flex-column">
+                            <label class="form-label fw-medium" aria-hidden="true" style="visibility:hidden;">&nbsp;</label>
+                            <button type="button" class="btn btn-outline-secondary" id="btnCopiarPrevisto"
+                                    title="Copiar o Valor Previsto para o Valor Pago">
+                                <i class="bi bi-arrow-right-short"></i>
+                            </button>
+                        </div>
                         <div class="col">
                             <label class="form-label fw-medium">Valor Pago</label>
-                            <div class="input-group">
-                                {{ form.valor_pago(class="form-control" + (" is-invalid" if form.valor_pago.errors else ""), placeholder="Vazio = não pago") }}
-                                <button type="button" class="btn btn-outline-secondary" id="btnCopiarPrevisto"
-                                        title="Copiar o Valor Previsto para o Valor Pago">
-                                    <i class="bi bi-arrow-right-short"></i>
-                                </button>
-                            </div>
+                            {{ form.valor_pago(class="form-control" + (" is-invalid" if form.valor_pago.errors else ""), placeholder="Vazio = não pago") }}
                             {% for e in form.valor_pago.errors %}
-                                <div class="invalid-feedback d-block">{{ e }}</div>
+                                <div class="invalid-feedback">{{ e }}</div>
                             {% endfor %}
                         </div>
                     </div>
