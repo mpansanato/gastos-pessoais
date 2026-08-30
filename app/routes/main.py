@@ -9,6 +9,7 @@ from app.models.categoria import Categoria
 from app.models.gasto import Gasto
 from app.models.gasto_fixo import GastoFixo
 from app.models.investimento import Investimento
+from app.models.investimento_base import InvestimentoBase
 from app.models.parametro_projecao import ParametroProjecao
 from app.models.receita_extra import ReceitaExtra
 from app.models.receita_fixa import ReceitaFixa
@@ -141,6 +142,18 @@ def dashboard():
         .limit(5)
     ).all()
 
+    # ── Ativos vencidos que ainda precisam de baixa ─────────────────────────
+    vencidos = db.session.scalars(
+        db.select(InvestimentoBase)
+        .where(
+            InvestimentoBase.vencimento.isnot(None),
+            InvestimentoBase.vencimento <= hoje_date,
+            InvestimentoBase.encerrado_em.is_(None),
+            InvestimentoBase.ativo == True,
+        )
+        .order_by(InvestimentoBase.vencimento.asc())
+    ).all()
+
     # ── Chart 1: Gastos por categoria (mês atual) ───────────────────────────
     cat_totais: dict[str, float] = {}
     cat_cores: dict[str, str] = {}
@@ -263,6 +276,7 @@ def dashboard():
         fixos_ativos=fixos_ativos,
         total_fixos=total_fixos,
         vencimentos_proximos=vencimentos_proximos,
+        vencidos=vencidos,
         # Charts JSON
         chart_categorias=chart_categorias,
         chart_gastos=chart_gastos,

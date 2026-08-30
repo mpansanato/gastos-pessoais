@@ -16,6 +16,28 @@
     </span>
 </div>
 
+{# ── Alerta: investimentos vencidos precisam de baixa ───────────────────── #}
+{% if vencidos %}
+<div class="alert alert-danger border-0 d-flex align-items-start gap-2 mb-4">
+    <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+    <div class="flex-grow-1">
+        <strong>{{ vencidos | length }} investimento(s) vencido(s)</strong> aguardando baixa:
+        <ul class="mb-1 mt-1 ps-3 small">
+            {% for b in vencidos %}
+            <li>
+                <strong>{{ b.nome }}</strong>
+                — venceu em {{ b.vencimento.strftime('%d/%m/%Y') }}
+                {% if b.instituicao %} ({{ b.instituicao.nome }}){% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        <a href="{{ url_for('investimentos.index') }}" class="alert-link small">
+            <i class="bi bi-arrow-right-circle me-1"></i>Ir para Investimentos e dar baixa
+        </a>
+    </div>
+</div>
+{% endif %}
+
 {# ── 4 Cards de resumo ──────────────────────────────────────────────────── #}
 <div class="row g-3 mb-4">
 

@@ -65,6 +65,15 @@
                                 <i class="bi bi-arrow-up-circle-fill"></i> retirada
                             </span>
                         {% endif %}
+                        {% if inv.investimento_base_id in vencidos_ids %}
+                            <span class="badge bg-danger ms-1 fw-semibold" style="font-size:.6rem;">
+                                <i class="bi bi-exclamation-triangle-fill"></i> venceu — dar baixa
+                            </span>
+                        {% elif inv.investimento_base_id in encerrados_ids %}
+                            <span class="badge bg-dark ms-1 fw-normal" style="font-size:.6rem;">
+                                <i class="bi bi-lock-fill"></i> encerrado
+                            </span>
+                        {% endif %}
                         {% if inv.observacao %}
                             <small class="text-muted d-block">{{ inv.observacao }}</small>
                         {% endif %}
@@ -111,6 +120,14 @@
                     </td>
                     <td class="text-end">
                         {% if inv.investimento_base_id and eh_editavel %}
+                            {% if inv.investimento_base_id in vencidos_ids %}
+                            <button class="btn btn-sm btn-danger py-0 px-2 me-1"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalBaixa{{ inv.id }}"
+                                    title="Dar baixa (vencimento)">
+                                <i class="bi bi-box-arrow-in-down" style="font-size:.8rem;"></i>
+                            </button>
+                            {% endif %}
                             <button class="btn btn-sm btn-outline-warning py-0 px-2 me-1"
                                     data-bs-toggle="modal"
                                     data-bs-target="#modalRetirada{{ inv.investimento_base_id }}"

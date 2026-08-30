@@ -82,6 +82,19 @@ def _migrate_investimentos():
         conn.commit()
 
 
+def _migrate_investimentos_base():
+    """Adiciona colunas de baixa por vencimento à tabela investimentos_base."""
+    with db.engine.connect() as conn:
+        cols = [r[1] for r in conn.execute(text('PRAGMA table_info(investimentos_base)'))]
+        if 'encerrado_em' not in cols:
+            conn.execute(text('ALTER TABLE investimentos_base ADD COLUMN encerrado_em DATE'))
+        if 'receita_baixa_id' not in cols:
+            conn.execute(text(
+                'ALTER TABLE investimentos_base ADD COLUMN receita_baixa_id INTEGER REFERENCES receitas_extras(id)'
+            ))
+        conn.commit()
+
+
 def _migrate_categorias():
     """Adiciona colunas novas à tabela categorias sem perder dados existentes."""
     with db.engine.connect() as conn:
@@ -257,6 +270,7 @@ def create_app(config_class=Config):
         db.create_all()   # cria receitas_extras automaticamente (nova tabela)
         _migrate_gastos()
         _migrate_investimentos()
+        _migrate_investimentos_base()
         _migrate_categorias()
         _migrate_receitas_fixas()
         _migrate_entradas_fixas()

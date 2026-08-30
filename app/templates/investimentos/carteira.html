@@ -80,8 +80,18 @@
                             {% endif %}
                         </td>
                         <td class="text-center">
-                            {% if base.ativo %}
+                            {% if base.encerrado_em %}
+                            <span class="badge bg-dark"><i class="bi bi-lock-fill me-1"></i>Encerrado</span>
+                            <small class="text-muted d-block" style="font-size:.68rem;">
+                                baixa {{ base.encerrado_em.strftime('%d/%m/%Y') }}
+                            </small>
+                            {% elif base.ativo %}
                             <span class="badge bg-success">Ativo</span>
+                            {% if base.vencimento and base.vencimento <= now().date() %}
+                            <small class="text-danger d-block fw-semibold" style="font-size:.66rem;">
+                                <i class="bi bi-exclamation-triangle-fill"></i> venceu
+                            </small>
+                            {% endif %}
                             {% else %}
                             <span class="badge bg-secondary">Pausado</span>
                             {% endif %}
@@ -91,6 +101,17 @@
                                class="btn btn-sm btn-outline-secondary py-0 px-2 me-1" title="Editar">
                                 <i class="bi bi-pencil" style="font-size:.8rem;"></i>
                             </a>
+                            {% if base.encerrado_em %}
+                            <form method="POST" action="{{ url_for('investimentos.reverter_baixa', base_id=base.id) }}"
+                                  class="d-inline"
+                                  onsubmit="return confirm('Reverter a baixa de {{ base.nome }}? Remove a entrada em Gastos e restaura o ativo.')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2 me-1"
+                                        title="Reverter baixa">
+                                    <i class="bi bi-arrow-counterclockwise" style="font-size:.8rem;"></i>
+                                </button>
+                            </form>
+                            {% else %}
                             <form method="POST" action="{{ url_for('investimentos.toggle_carteira', id=base.id) }}"
                                   class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -101,6 +122,7 @@
                                        style="font-size:.8rem;"></i>
                                 </button>
                             </form>
+                            {% endif %}
                             <form method="POST" action="{{ url_for('investimentos.excluir_carteira', id=base.id) }}"
                                   class="d-inline"
                                   onsubmit="return confirm('Remover {{ base.nome }} da carteira?')">

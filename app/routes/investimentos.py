@@ -83,6 +83,12 @@ class RetiradaForm(FlaskForm):
     submit    = SubmitField('Registrar Retirada')
 
 
+class BaixaForm(FlaskForm):
+    """Baixa por vencimento: resgata o saldo cheio, zera e encerra o ativo."""
+    descricao = StringField('Descrição', validators=[Optional(), Length(max=200)])
+    submit    = SubmitField('Confirmar Baixa')
+
+
 class InstituicaoForm(FlaskForm):
     nome = StringField('Nome', validators=[DataRequired(), Length(max=80)])
     cor  = SelectField('Cor', choices=CORES)
@@ -580,6 +586,123 @@ def excluir_retirada(id: int):
     return redirect(url_for('investimentos.por_mes', ano=ano, mes=mes))
 
 
+# ── Rotas: Baixa por vencimento ───────────────────────────────────────────────
+
+@investimentos_bp.route('/baixa/<int:base_id>/<int:ano>/<int:mes>', methods=['POST'])
+@login_required
+def baixa_vencimento(base_id: int, ano: int, mes: int):
+    """Dá baixa num ativo vencido: resgata o saldo cheio como entrada em Gastos,
+    zera a posição do mês e encerra o ativo (remove das projeções futuras)."""
+    hoje = datetime.today()
+    base = db.get_or_404(InvestimentoBase, base_id)
+    form = BaixaForm()
+
+    if not form.validate_on_submit():
+        for erros in form.errors.values():
+            for e in erros:
+                flash(e, 'danger')
+        return redirect(url_for('investimentos.por_mes', ano=ano, mes=mes))
+
+    if base.encerrado_em is not None:
+        flash(f'"{base.nome}" já teve baixa registrada.', 'info')
+        return redirect(url_for('investimentos.por_mes', ano=ano, mes=mes))
+
+    inv_mes = db.session.scalar(
+        db.select(Investimento).where(
+            Investimento.investimento_base_id == base_id,
+            Investimento.mes == mes,
+            Investimento.ano == ano,
+        )
+    )
+    valor_resgatado = inv_mes.valor if inv_mes else Decimal('0')
+    if not inv_mes or valor_resgatado <= 0:
+        flash(f'"{base.nome}" não tem saldo neste mês para dar baixa.', 'warning')
+        return redirect(url_for('investimentos.por_mes', ano=ano, mes=mes))
+
+    # Registra o resgate como entrada em Gastos Mensais (mesmo mecanismo da retirada)
+    receita = ReceitaExtra(
+        descricao=form.descricao.data or f'Resgate no vencimento: {base.nome}',
+        tipo='Saque de Investimento',
+        valor=valor_resgatado,
+        mes=mes, ano=ano,
+        instituicao_id=base.instituicao_id,
+        observacao=f'Baixa por vencimento de {base.nome}',
+    )
+    db.session.add(receita)
+    db.session.flush()  # garante receita.id
+
+    # Zera a posição do mês (mantém o lançamento como confirmado em 0)
+    inv_mes.valor = Decimal('0')
+    inv_mes.confirmado = True
+    inv_mes.rendimento_real = None
+    inv_mes.rendimento_projetado = None
+    inv_mes.retirada = None
+    db.session.flush()  # aplica antes do delete abaixo (não apaga este lançamento)
+
+    # Remove todas as projeções futuras não confirmadas do ativo
+    db.session.execute(
+        db.delete(Investimento).where(
+            Investimento.investimento_base_id == base_id,
+            Investimento.confirmado == False,
+        )
+    )
+
+    # Encerra o ativo na carteira
+    base.ativo = False
+    base.encerrado_em = hoje.date()
+    base.receita_baixa_id = receita.id
+
+    db.session.commit()
+    flash(
+        f'Baixa de "{base.nome}" registrada — {_brl(float(valor_resgatado))} lançado como entrada em Gastos, '
+        f'posição zerada e ativo encerrado na carteira.',
+        'success',
+    )
+    return redirect(url_for('investimentos.por_mes', ano=ano, mes=mes))
+
+
+@investimentos_bp.route('/baixa/reverter/<int:base_id>', methods=['POST'])
+@login_required
+def reverter_baixa(base_id: int):
+    """Desfaz uma baixa: remove a entrada de Gastos, restaura o saldo e reativa o ativo."""
+    hoje = datetime.today()
+    base = db.get_or_404(InvestimentoBase, base_id)
+
+    if base.encerrado_em is None:
+        flash(f'"{base.nome}" não está encerrado.', 'info')
+        return redirect(url_for('investimentos.carteira'))
+
+    receita = db.session.get(ReceitaExtra, base.receita_baixa_id) if base.receita_baixa_id else None
+    if receita:
+        # Restaura o saldo do mês da baixa (valor resgatado == saldo antes da baixa)
+        inv_mes = db.session.scalar(
+            db.select(Investimento).where(
+                Investimento.investimento_base_id == base_id,
+                Investimento.mes == receita.mes,
+                Investimento.ano == receita.ano,
+            )
+        )
+        if inv_mes:
+            inv_mes.valor = receita.valor
+            inv_mes.confirmado = True
+        db.session.delete(receita)
+
+    base.ativo = True
+    base.encerrado_em = None
+    base.receita_baixa_id = None
+    db.session.commit()
+
+    # Reprojeta 12 meses à frente a partir do saldo restaurado
+    taxa = _get_taxa()
+    n = _ensure_12_meses(base, taxa, hoje.month, hoje.year)
+    flash(
+        f'Baixa de "{base.nome}" revertida — entrada removida de Gastos, saldo restaurado e '
+        f'{n} meses reprojetados.',
+        'success',
+    )
+    return redirect(url_for('investimentos.carteira'))
+
+
 # ── Rota: Confirmação de rendimento ───────────────────────────────────────────
 
 @investimentos_bp.route('/confirmar/<int:inv_id>', methods=['POST'])
@@ -717,6 +840,19 @@ def por_mes(ano: int, mes: int):
     # Lançamentos vinculados a uma base (para gerar os modais)
     todos_base = [i for i in todos if i.investimento_base_id]
 
+    # Status de vencimento/baixa por base (sinaliza "venceu" e habilita a baixa)
+    base_ids_ref = {i.investimento_base_id for i in todos_base}
+    vencidos_ids: set[int] = set()
+    encerrados_ids: set[int] = set()
+    if base_ids_ref:
+        for b in db.session.scalars(
+            db.select(InvestimentoBase).where(InvestimentoBase.id.in_(base_ids_ref))
+        ).all():
+            if b.encerrado_em is not None:
+                encerrados_ids.add(b.id)
+            elif b.vencimento is not None and b.vencimento <= hoje:
+                vencidos_ids.add(b.id)
+
     # Retiradas do mês agrupadas por base_id
     retiradas_mes = db.session.scalars(
         db.select(RetiradaInvestimento).where(
@@ -746,6 +882,7 @@ def por_mes(ano: int, mes: int):
 
     confirm_form  = ConfirmarForm()
     retirada_form = RetiradaForm()
+    baixa_form    = BaixaForm()
     eh_passado    = (ano, mes) <= (hoje.year, hoje.month)
     eh_atual      = (ano == hoje.year and mes == hoje.month)
     # Edição liberada para passado, mês corrente e o próximo mês (permite lançar
@@ -781,9 +918,12 @@ def por_mes(ano: int, mes: int):
         qtd_inst=qtd_inst,
         todos_base=todos_base,
         retiradas_por_base=retiradas_por_base,
+        vencidos_ids=vencidos_ids,
+        encerrados_ids=encerrados_ids,
         saldo_anterior_por_inv=saldo_anterior_por_inv,
         confirm_form=confirm_form,
         retirada_form=retirada_form,
+        baixa_form=baixa_form,
         taxa_form=taxa_form,
         param=param,
         eh_passado=eh_passado,
