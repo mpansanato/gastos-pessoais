@@ -201,14 +201,37 @@
         <div class="modal-content">
             <div class="modal-header border-0 pb-0">
                 <h6 class="modal-title fw-bold">
+                    {% if inv.confirmado %}
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Atualizar Saldo Já Confirmado
+                    {% else %}
                     <i class="bi bi-check2-circle text-success me-2"></i>Confirmar Saldo Final
+                    {% endif %}
                 </h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('investimentos.confirmar', inv_id=inv.id) }}" novalidate>
+            <form method="POST" action="{{ url_for('investimentos.confirmar', inv_id=inv.id) }}" novalidate
+                  {% if inv.confirmado %}
+                  class="form-reconfirmar"
+                  data-nome="{{ inv.nome }}"
+                  data-mes-ano="{{ nome_mes }}/{{ ano }}"
+                  data-saldo="{{ inv.valor | brl }}"
+                  {% endif %}>
                 {{ confirm_form.hidden_tag() }}
                 <div class="modal-body">
                     <p class="small text-muted mb-1"><strong>{{ inv.nome }}</strong></p>
+                    <div class="alert alert-secondary border-0 py-2 px-3 small mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-calendar3"></i>
+                        <span>Mês sendo editado: <strong>{{ nome_mes }}/{{ ano }}</strong></span>
+                    </div>
+                    {% if inv.confirmado %}
+                    <div class="alert alert-warning border-0 py-2 px-3 small mb-3">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        <strong>Este mês já está confirmado</strong> com saldo de
+                        <strong>{{ inv.valor | brl }}</strong>.
+                        Confira se você não está no mês errado antes de prosseguir — ao salvar, esse valor será
+                        <strong>sobrescrito</strong>.
+                    </div>
+                    {% endif %}
                     {% set saldo_ant = saldo_anterior_por_inv.get(inv.id, 0) %}
                     {% set total_ret = retiradas_por_base.get(inv.investimento_base_id, []) | sum(attribute='valor') | float %}
                     <div class="small mb-3" style="font-size:.78rem;">
@@ -236,7 +259,11 @@
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    {% if inv.confirmado %}
+                    {{ confirm_form.submit(class="btn btn-warning btn-sm px-4", value="Sobrescrever Saldo") }}
+                    {% else %}
                     {{ confirm_form.submit(class="btn btn-success btn-sm px-4") }}
+                    {% endif %}
                 </div>
             </form>
         </div>
@@ -350,6 +377,21 @@ document.getElementById('filtroInvestimento')?.addEventListener('input', functio
     // Mostra/oculta cabeçalho de instituição
     document.querySelectorAll('tr.inst-header').forEach(function (tr) {
         tr.style.display = visivelPorInst[tr.dataset.inst] ? '' : 'none';
+    });
+});
+
+// Confirma com o usuário antes de sobrescrever um saldo já confirmado
+// (evita o erro de confirmar/atualizar o mês errado por engano).
+document.querySelectorAll('form.form-reconfirmar').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+        const nome   = form.dataset.nome;
+        const mesAno = form.dataset.mesAno;
+        const saldo  = form.dataset.saldo;
+        const msg = `Atenção: ${mesAno} de "${nome}" JÁ ESTÁ CONFIRMADO com saldo de ${saldo}.\n\n` +
+                    `Você tem certeza que está no mês correto? Esta ação vai SOBRESCREVER o valor já confirmado.`;
+        if (!confirm(msg)) {
+            e.preventDefault();
+        }
     });
 });
 </script>
