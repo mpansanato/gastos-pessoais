@@ -13,6 +13,7 @@ from app.models.investimento_base import InvestimentoBase
 from app.models.parametro_projecao import ParametroProjecao
 from app.models.receita_extra import ReceitaExtra
 from app.models.receita_fixa import ReceitaFixa
+from app.routes.projecoes import extras_previstas_por_mes
 
 main_bp = Blueprint('main', __name__)
 
@@ -108,14 +109,21 @@ def dashboard():
         total_investido_outros = total_investido - total_investido_previdencia
 
     # ── Projeção 12 meses ───────────────────────────────────────────────────
+    # Sensibilizada por entradas avulsas previstas (bônus, outorgas...) ainda não
+    # realizadas: somam-se ao aporte mensal fixo no mês específico em que caem.
     param_proj = db.session.scalar(db.select(ParametroProjecao))
+    extras_por_mes_proj = extras_previstas_por_mes(mes, ano, 12)
+    projecao_12m_extras = sum(extras_por_mes_proj.values())
     projecao_12m = 0.0
     if param_proj and total_investido > 0:
         saldo = total_investido
         r = float(param_proj.rendimento_mensal_pct) / 100
         a = float(param_proj.aporte_mensal)
+        m_proj, a_proj = mes, ano
         for _ in range(12):
-            saldo = saldo * (1 + r) + a
+            m_proj, a_proj = _proximo_mes(m_proj, a_proj)
+            extra = extras_por_mes_proj.get((a_proj, m_proj), 0.0)
+            saldo = saldo * (1 + r) + a + extra
         projecao_12m = saldo
 
     # ── Gastos fixos ativos ─────────────────────────────────────────────────
@@ -231,8 +239,16 @@ def dashboard():
     })
 
     # ── Chart 3: Patrimônio real + projeção ─────────────────────────────────
+    # Restrito a meses <= hoje: o módulo de Investimentos projeta 12 meses à frente
+    # automaticamente (rolling-forward), e esses meses futuros não são "real" — são
+    # só projeção interna. Sem este filtro, a linha "Real" iria até bem mais longe
+    # que hoje, e a projeção desta tela começaria de um ponto já todo projetado.
     hist_rows = db.session.execute(
         db.select(Investimento.ano, Investimento.mes, db.func.sum(Investimento.valor).label('total'))
+        .where(db.or_(
+            Investimento.ano < ano,
+            db.and_(Investimento.ano == ano, Investimento.mes <= mes),
+        ))
         .group_by(Investimento.ano, Investimento.mes)
         .order_by(Investimento.ano.asc(), Investimento.mes.asc())
     ).all()
@@ -240,7 +256,8 @@ def dashboard():
     hist_labels = [_label(r.mes, r.ano) for r in hist_rows]
     hist_data   = [float(r.total) for r in hist_rows]
 
-    # Projeção a partir do último ponto real
+    # Projeção a partir do último ponto real, sensibilizada pelas mesmas entradas
+    # avulsas previstas usadas no card "Projeção 12m".
     proj_labels, proj_data = [], []
     if hist_data and param_proj:
         saldo = hist_data[-1]
@@ -249,7 +266,8 @@ def dashboard():
         pm, pa = (hist_rows[-1].mes, hist_rows[-1].ano) if hist_rows else (mes, ano)
         for _ in range(12):
             pm, pa = _proximo_mes(pm, pa)
-            saldo = saldo * (1 + r) + a
+            extra = extras_por_mes_proj.get((pa, pm), 0.0)
+            saldo = saldo * (1 + r) + a + extra
             proj_labels.append(_label(pm, pa))
             proj_data.append(round(saldo, 2))
 
@@ -275,6 +293,7 @@ def dashboard():
         inv_base_mes=MESES_ABREV[inv_base_mes - 1],
         inv_base_ano=inv_base_ano,
         projecao_12m=projecao_12m,
+        projecao_12m_extras=projecao_12m_extras,
         # Quick stats
         fixos_ativos=fixos_ativos,
         total_fixos=total_fixos,

@@ -129,6 +129,14 @@
                 <small class="text-muted">
                     +{{ ((projecao_12m - total_investido) | brl) }} est.
                 </small>
+                {% if projecao_12m_extras and projecao_12m_extras > 0 %}
+                <div class="mt-1" style="font-size:.72rem;">
+                    <span class="text-warning">
+                        <i class="bi bi-gift-fill me-1"></i>dos quais {{ projecao_12m_extras | brl }}
+                        de entradas extras previstas
+                    </span>
+                </div>
+                {% endif %}
                 {% else %}
                 <div class="fw-bold fs-5 text-muted">—</div>
                 <small class="text-muted">configure projeções</small>

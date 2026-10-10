@@ -14,6 +14,7 @@ from app.models.gasto_fixo import GastoFixo
 from app.models.investimento import Investimento
 from app.models.parametro_mensal import ParametroMensal
 from app.models.parametro_projecao import ParametroProjecao
+from app.models.receita_extra import ReceitaExtra
 
 projecoes_bp = Blueprint('projecoes', __name__, url_prefix='/projecoes')
 
@@ -58,8 +59,39 @@ def _mes_anterior(mes: int, ano: int):
     return (12, ano - 1) if mes == 1 else (mes - 1, ano)
 
 
+def extras_previstas_por_mes(hoje_mes: int, hoje_ano: int, n_meses: int) -> dict:
+    """Soma, por (ano, mes), as receitas extras avulsas AINDA NÃO REALIZADAS
+    (valor_realizado is None) nos próximos n_meses a partir de hoje (inclusive).
+
+    Usado para sensibilizar a projeção de patrimônio com entradas pontuais já
+    previstas (bônus, outorgas, restituições...) — sem mexer no aporte mensal
+    "normal" configurado pelo usuário, só somando o extra no mês em que cai.
+    """
+    fim_mes, fim_ano = hoje_mes, hoje_ano
+    for _ in range(n_meses):
+        fim_mes, fim_ano = _proximo_mes(fim_mes, fim_ano)
+    rows = db.session.execute(
+        db.select(ReceitaExtra.ano, ReceitaExtra.mes, db.func.sum(ReceitaExtra.valor).label('total'))
+        .where(
+            ReceitaExtra.valor_realizado.is_(None),
+            db.or_(
+                ReceitaExtra.ano > hoje_ano,
+                db.and_(ReceitaExtra.ano == hoje_ano, ReceitaExtra.mes >= hoje_mes),
+            ),
+            db.or_(
+                ReceitaExtra.ano < fim_ano,
+                db.and_(ReceitaExtra.ano == fim_ano, ReceitaExtra.mes <= fim_mes),
+            ),
+        )
+        .group_by(ReceitaExtra.ano, ReceitaExtra.mes)
+    ).all()
+    return {(r.ano, r.mes): float(r.total) for r in rows}
+
+
 def calcular_projecao(base_valor: float, rendimento_pct: float, aporte_mensal: float,
-                      n_meses: int, base_mes: int, base_ano: int) -> list[dict]:
+                      n_meses: int, base_mes: int, base_ano: int,
+                      extras_por_mes: dict | None = None) -> list[dict]:
+    extras_por_mes = extras_por_mes or {}
     resultados = []
     saldo = base_valor
     r = rendimento_pct / 100
@@ -67,14 +99,18 @@ def calcular_projecao(base_valor: float, rendimento_pct: float, aporte_mensal: f
     mes, ano = base_mes, base_ano
     for _ in range(n_meses):
         mes, ano = _proximo_mes(mes, ano)
+        aporte_extra = extras_por_mes.get((ano, mes), 0.0)
+        aporte_total = aporte_mensal + aporte_extra
         rendimento = saldo * r
-        saldo_fim = saldo + rendimento + aporte_mensal
+        saldo_fim = saldo + rendimento + aporte_total
         resultados.append({
             'mes': mes, 'ano': ano,
             'nome_mes': MESES[mes - 1],
             'saldo_inicio': saldo,
             'rendimento': rendimento,
-            'aporte': aporte_mensal,
+            'aporte': aporte_total,
+            'aporte_base': aporte_mensal,
+            'aporte_extra': aporte_extra,
             'saldo_fim': saldo_fim,
         })
         saldo = saldo_fim
@@ -152,13 +188,20 @@ def index():
     # Contexto financeiro (salário, fixos, surplus)
     contexto = _contexto_financeiro(hoje)
 
-    # Histórico real de investimentos
+    # Histórico real de investimentos — restrito a meses <= hoje, para não usar como
+    # "base" um mês que já é só projeção do rolling-forward do módulo de investimentos
+    # (senão a projeção desta tela acabaria compondo 24 meses de crescimento em cima
+    # de outros 12 já projetados, inflando o resultado).
     historico_rows = db.session.execute(
         db.select(
             Investimento.ano,
             Investimento.mes,
             db.func.sum(Investimento.valor).label('total'),
         )
+        .where(db.or_(
+            Investimento.ano < hoje.year,
+            db.and_(Investimento.ano == hoje.year, Investimento.mes <= hoje.month),
+        ))
         .group_by(Investimento.ano, Investimento.mes)
         .order_by(Investimento.ano.asc(), Investimento.mes.asc())
     ).all()
@@ -178,6 +221,7 @@ def index():
     base = historico[-1]
     base_mes, base_ano, base_valor = base['mes'], base['ano'], base['total']
 
+    extras_por_mes = extras_previstas_por_mes(base_mes, base_ano, param.meses_projecao)
     projecoes = calcular_projecao(
         base_valor=base_valor,
         rendimento_pct=float(param.rendimento_mensal_pct),
@@ -185,7 +229,9 @@ def index():
         n_meses=param.meses_projecao,
         base_mes=base_mes,
         base_ano=base_ano,
+        extras_por_mes=extras_por_mes,
     )
+    total_extras_previstos = sum(extras_por_mes.values())
 
     # Vencimentos nos próximos 12 meses
     try:
@@ -215,6 +261,7 @@ def index():
         base_valor=base_valor,
         nome_mes_base=MESES[base_mes - 1],
         projecoes=projecoes,
+        total_extras_previstos=total_extras_previstos,
         vencimentos=vencimentos,
         hoje=hoje,
     )
