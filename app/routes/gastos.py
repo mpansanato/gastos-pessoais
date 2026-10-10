@@ -61,7 +61,10 @@ class CategoriaForm(FlaskForm):
 class ReceitaExtraForm(FlaskForm):
     tipo = SelectField('Tipo', choices=[(t, t) for t in ReceitaExtra.TIPOS])
     descricao = StringField('Descrição (opcional — usa o Tipo se vazio)', validators=[Optional(), Length(max=200)])
-    valor = DecimalField('Valor (R$)', validators=[DataRequired(), NumberRange(min=0)], places=2)
+    valor = DecimalField('Valor Previsto (R$)', validators=[DataRequired(), NumberRange(min=0)], places=2)
+    valor_realizado = DecimalField(
+        'Valor Realizado (R$)', validators=[Optional(), NumberRange(min=0)], places=2
+    )
     instituicao_id = SelectField('Instituição (se Saque)', coerce=int, validators=[Optional()])
     observacao = TextAreaField('Observação', validators=[Optional(), Length(max=300)])
     submit = SubmitField('Adicionar')
@@ -93,25 +96,32 @@ def _calcular_totais(gastos: list, receitas_extras: list = None, receitas_fixas:
     receitas_fixas = receitas_fixas or []
     total_previsto = sum(float(g.valor_previsto) for g in gastos)
     total_pago = sum(float(g.valor_pago) for g in gastos if g.valor_pago is not None)
-    total_extras = sum(float(r.valor) for r in receitas_extras)
+    total_extras_previsto = sum(float(r.valor) for r in receitas_extras)
+    total_extras_realizado = sum(
+        float(r.valor_realizado)
+        for r in receitas_extras
+        if r.valor_realizado is not None
+    )
     total_fixas_previsto = sum(float(r.valor) for r in receitas_fixas)
     total_fixas_realizado = sum(
         float(r.valor_realizado)
         for r in receitas_fixas
         if r.valor_realizado is not None
     )
-    entrada_prevista  = total_fixas_previsto + total_extras
-    entrada_realizada = total_fixas_realizado + total_extras
+    entrada_prevista  = total_fixas_previsto + total_extras_previsto
+    entrada_realizada = total_fixas_realizado + total_extras_realizado
     return {
-        'total_previsto':        total_previsto,
-        'total_pago':            total_pago,
-        'total_extras':          total_extras,
-        'total_fixas_previsto':  total_fixas_previsto,
-        'total_fixas_realizado': total_fixas_realizado,
-        'entrada_prevista':      entrada_prevista,
-        'entrada_realizada':     entrada_realizada,
-        'saldo_previsto':        entrada_prevista - total_previsto,
-        'saldo_realizado':       entrada_realizada - total_pago,
+        'total_previsto':          total_previsto,
+        'total_pago':              total_pago,
+        'total_extras':            total_extras_previsto,  # mantido p/ compatibilidade (= previsto)
+        'total_extras_previsto':   total_extras_previsto,
+        'total_extras_realizado':  total_extras_realizado,
+        'total_fixas_previsto':    total_fixas_previsto,
+        'total_fixas_realizado':   total_fixas_realizado,
+        'entrada_prevista':        entrada_prevista,
+        'entrada_realizada':       entrada_realizada,
+        'saldo_previsto':          entrada_prevista - total_previsto,
+        'saldo_realizado':         entrada_realizada - total_pago,
     }
 
 
@@ -446,13 +456,17 @@ def nova_receita(ano: int, mes: int):
             descricao=descricao,
             tipo=form.tipo.data,
             valor=form.valor.data,
+            valor_realizado=form.valor_realizado.data,
             mes=mes, ano=ano,
             instituicao_id=inst_id,
             observacao=form.observacao.data or None,
         )
         db.session.add(receita)
         db.session.commit()
-        flash(f'{receita.tipo} — {receita.descricao} adicionado às entradas do mês.', 'success')
+        if receita.valor_realizado is None:
+            flash(f'{receita.tipo} — {receita.descricao} prevista para o mês. Confirme quando cair.', 'success')
+        else:
+            flash(f'{receita.tipo} — {receita.descricao} adicionado às entradas do mês.', 'success')
     else:
         for nome_campo, erros in form.errors.items():
             campo = getattr(form, nome_campo, None)
@@ -460,6 +474,31 @@ def nova_receita(ano: int, mes: int):
             for e in erros:
                 flash(f'{label}: {e}', 'danger')
     return redirect(url_for('gastos.por_mes', ano=ano, mes=mes))
+
+
+@gastos_bp.route('/receita/editar/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_receita(id: int):
+    receita = db.get_or_404(ReceitaExtra, id)
+    instituicoes = db.session.scalars(db.select(Instituicao).order_by(Instituicao.nome)).all()
+    form = ReceitaExtraForm(obj=receita)
+    form.instituicao_id.choices = [(0, '— selecione —')] + [(i.id, i.nome) for i in instituicoes]
+    if request.method == 'GET' and not receita.instituicao_id:
+        form.instituicao_id.data = 0
+    if form.validate_on_submit():
+        inst_id = form.instituicao_id.data or None
+        if inst_id == 0:
+            inst_id = None
+        receita.tipo = form.tipo.data
+        receita.descricao = (form.descricao.data or '').strip() or form.tipo.data
+        receita.valor = form.valor.data
+        receita.valor_realizado = form.valor_realizado.data
+        receita.instituicao_id = inst_id
+        receita.observacao = form.observacao.data or None
+        db.session.commit()
+        flash(f'Receita "{receita.descricao}" atualizada.', 'success')
+        return redirect(url_for('gastos.por_mes', ano=receita.ano, mes=receita.mes))
+    return render_template('gastos/receita_extra_form.html', form=form, receita=receita)
 
 
 @gastos_bp.route('/receita/excluir/<int:id>', methods=['POST'])

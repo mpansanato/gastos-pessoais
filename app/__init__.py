@@ -82,6 +82,18 @@ def _migrate_investimentos():
         conn.commit()
 
 
+def _migrate_receitas_extras():
+    """Adiciona valor_realizado à tabela receitas_extras, preservando o histórico:
+    registros já existentes (cadastrados antes desta mudança) são tratados como já
+    realizados, já que até então não havia distinção entre previsto e realizado."""
+    with db.engine.connect() as conn:
+        cols = [r[1] for r in conn.execute(text('PRAGMA table_info(receitas_extras)'))]
+        if 'valor_realizado' not in cols:
+            conn.execute(text('ALTER TABLE receitas_extras ADD COLUMN valor_realizado NUMERIC(12,2)'))
+            conn.execute(text('UPDATE receitas_extras SET valor_realizado = valor'))
+        conn.commit()
+
+
 def _migrate_investimentos_base():
     """Adiciona colunas de baixa por vencimento à tabela investimentos_base."""
     with db.engine.connect() as conn:
@@ -271,6 +283,7 @@ def create_app(config_class=Config):
         _migrate_gastos()
         _migrate_investimentos()
         _migrate_investimentos_base()
+        _migrate_receitas_extras()
         _migrate_categorias()
         _migrate_receitas_fixas()
         _migrate_entradas_fixas()

@@ -50,7 +50,10 @@ def dashboard():
     receitas_extras_mes = db.session.scalars(
         db.select(ReceitaExtra).where(ReceitaExtra.mes == mes, ReceitaExtra.ano == ano)
     ).all()
-    total_extras_mes = sum(float(r.valor) for r in receitas_extras_mes)
+    total_extras_previsto_mes = sum(float(r.valor) for r in receitas_extras_mes)
+    total_extras_realizado_mes = sum(
+        float(r.valor_realizado) for r in receitas_extras_mes if r.valor_realizado is not None
+    )
 
     # ── Entradas fixas do mês: previsto e realizado ─────────────────────
     receitas_fixas_mes = db.session.scalars(
@@ -62,9 +65,9 @@ def dashboard():
         for r in receitas_fixas_mes
         if r.valor_realizado is not None
     )
-    total_entradas_mes = total_extras_mes + total_fixas_previsto_mes
-    saldo_realizado_mes = total_fixas_realizado_mes + total_extras_mes - total_pago_mes
-    saldo_previsto_mes  = total_fixas_previsto_mes + total_extras_mes - total_prev_mes
+    total_entradas_mes = total_extras_previsto_mes + total_fixas_previsto_mes
+    saldo_realizado_mes = total_fixas_realizado_mes + total_extras_realizado_mes - total_pago_mes
+    saldo_previsto_mes  = total_fixas_previsto_mes + total_extras_previsto_mes - total_prev_mes
 
     # ── Patrimônio investido (mês atual / mais recente não-futuro) ──────────
     # Restringe a meses <= atual para não exibir projeções futuras como

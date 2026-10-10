@@ -201,10 +201,17 @@ def index():
     # ── Dados por mês (Seções B e D) ────────────────────────────────────
     meses_data = []
     for m in range(1, 13):
-        extras = float(
+        extras_previsto = float(
             db.session.scalar(
                 db.select(db.func.sum(ReceitaExtra.valor))
                 .where(ReceitaExtra.mes == m, ReceitaExtra.ano == ano)
+            ) or 0
+        )
+        extras_realizado = float(
+            db.session.scalar(
+                db.select(db.func.sum(ReceitaExtra.valor_realizado))
+                .where(ReceitaExtra.mes == m, ReceitaExtra.ano == ano,
+                       ReceitaExtra.valor_realizado.isnot(None))
             ) or 0
         )
         previsto = float(
@@ -235,8 +242,8 @@ def index():
         )
         fixas_realizado = float(fixas_realizado_val) if fixas_realizado_val is not None else None
 
-        receita_total     = extras + fixas_previsto
-        receita_realizada = (extras + fixas_realizado) if fixas_realizado is not None else None
+        receita_total     = extras_previsto + fixas_previsto
+        receita_realizada = (extras_realizado + fixas_realizado) if fixas_realizado is not None else None
 
         if eh_futuro:
             saldo = None
@@ -247,7 +254,7 @@ def index():
 
         meses_data.append({
             'mes': m, 'nome': MESES_NOMES[m - 1], 'abrev': MESES_ABREV[m - 1],
-            'extras': extras, 'receita_total': receita_total,
+            'extras': extras_previsto, 'receita_total': receita_total,
             'previsto': previsto, 'pago': pago, 'saldo': saldo, 'eh_futuro': eh_futuro,
             'fixas_previsto':    fixas_previsto,
             'fixas_realizado':   fixas_realizado,

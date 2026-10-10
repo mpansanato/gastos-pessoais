@@ -117,9 +117,20 @@
                         <span>
                             {% if r.eh_saque %}<i class="bi bi-arrow-down-circle me-1"></i>{% else %}+{% endif %}
                             {{ r.tipo }}
+                            {% if r.valor_realizado is none %}
+                            <span class="text-muted fst-italic" style="font-size:.65rem;">· previsto</span>
+                            {% endif %}
                         </span>
                         <span class="d-flex align-items-center gap-1">
-                            {{ r.valor | brl }}
+                            {% if r.valor_realizado is none %}
+                                <span class="text-muted">{{ r.valor | brl }}</span>
+                            {% else %}
+                                {{ r.valor_realizado | brl }}
+                            {% endif %}
+                            <a href="{{ url_for('gastos.editar_receita', id=r.id) }}"
+                               class="btn btn-link btn-sm p-0 text-muted" style="font-size:.65rem;" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
                             <form method="POST" action="{{ url_for('gastos.excluir_receita', id=r.id) }}"
                                   class="d-inline" onsubmit="return confirm('Remover {{ r.descricao }}?')">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -533,9 +544,25 @@
                         {{ receita_form.descricao(class="form-control", placeholder="Ex: Bônus anual 2026 — se vazio, usa o Tipo") }}
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-medium small">Valor (R$) *</label>
-                        {{ receita_form.valor(class="form-control", placeholder="0,00") }}
+                    <div class="row g-2 mb-1">
+                        <div class="col">
+                            <label class="form-label fw-medium small">Valor Previsto (R$) *</label>
+                            {{ receita_form.valor(class="form-control", placeholder="0,00") }}
+                        </div>
+                        <div class="col-auto px-1 d-flex flex-column">
+                            <label class="form-label fw-medium small" aria-hidden="true" style="visibility:hidden;">&nbsp;</label>
+                            <button type="button" class="btn btn-outline-secondary" id="btnCopiarPrevistoReceitaNova"
+                                    title="Copiar o Valor Previsto para o Valor Realizado">
+                                <i class="bi bi-arrow-right-short"></i>
+                            </button>
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-medium small">Valor Realizado</label>
+                            {{ receita_form.valor_realizado(class="form-control", placeholder="Ainda não caiu") }}
+                        </div>
+                    </div>
+                    <div class="form-text mb-3" style="font-size:.74rem;">
+                        Deixe <em>Valor Realizado</em> vazio se é só uma previsão — depois edite para confirmar quando cair.
                     </div>
 
                     <div class="mb-3" id="campoInstituicao" style="display:none;">
@@ -585,6 +612,13 @@ document.getElementById('btnCopiarPrevistoNovo')?.addEventListener('click', func
     const prev = document.getElementById('valor_previsto');
     const pago = document.getElementById('valor_pago');
     if (prev && pago) { pago.value = prev.value; pago.focus(); }
+});
+
+// Copiar Valor Previsto → Valor Realizado no modal Nova Receita
+document.getElementById('btnCopiarPrevistoReceitaNova')?.addEventListener('click', function () {
+    const prev = document.getElementById('valor');
+    const realizado = document.getElementById('valor_realizado');
+    if (prev && realizado) { realizado.value = prev.value; realizado.focus(); }
 });
 </script>
 {% endblock %}

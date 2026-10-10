@@ -12,7 +12,8 @@ class ReceitaExtra(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     descricao = db.Column(db.String(200), nullable=False)
     tipo = db.Column(db.String(50), nullable=False)
-    valor = db.Column(db.Numeric(12, 2), nullable=False)
+    valor = db.Column(db.Numeric(12, 2), nullable=False)  # valor previsto
+    valor_realizado = db.Column(db.Numeric(12, 2), nullable=True)  # preenchido quando a entrada cai
     mes = db.Column(db.Integer, nullable=False)
     ano = db.Column(db.Integer, nullable=False)
     # Preenchido apenas quando tipo == 'Saque de Investimento'

@@ -192,7 +192,8 @@ def exportar():
     # ── Aba 4: Receitas Extras ────────────────────────────────────────────
     ws4 = wb.create_sheet('Receitas Extras')
     header(ws4, 1,
-           ['Ano', 'Mês', 'Tipo', 'Descrição', 'Valor (R$)', 'Instituição (se Saque)', 'Observação'],
+           ['Ano', 'Mês', 'Tipo', 'Descrição', 'Previsto (R$)', 'Realizado (R$)',
+            'Instituição (se Saque)', 'Observação'],
            '20C997')
 
     receitas_export = db.session.scalars(
@@ -201,7 +202,7 @@ def exportar():
     for r in receitas_export:
         ws4.append([
             r.ano, MESES[r.mes - 1], r.tipo, r.descricao,
-            brl(r.valor),
+            brl(r.valor), brl(r.valor_realizado),
             r.instituicao.nome if r.instituicao else '',
             r.observacao or '',
         ])

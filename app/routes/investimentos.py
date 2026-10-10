@@ -496,11 +496,13 @@ def nova_retirada(base_id: int, ano: int, mes: int):
     if form.validate_on_submit():
         valor_retirada = form.valor.data
 
-        # Cria o Saque de Investimento em Gastos Mensais
+        # Cria o Saque de Investimento em Gastos Mensais (retirada já é um fato consumado,
+        # então nasce com previsto == realizado)
         receita = ReceitaExtra(
             descricao=form.descricao.data or f'Retirada: {base.nome}',
             tipo='Saque de Investimento',
             valor=valor_retirada,
+            valor_realizado=valor_retirada,
             mes=mes, ano=ano,
             instituicao_id=base.instituicao_id,
             observacao=None,
@@ -619,11 +621,13 @@ def baixa_vencimento(base_id: int, ano: int, mes: int):
         flash(f'"{base.nome}" não tem saldo neste mês para dar baixa.', 'warning')
         return redirect(url_for('investimentos.por_mes', ano=ano, mes=mes))
 
-    # Registra o resgate como entrada em Gastos Mensais (mesmo mecanismo da retirada)
+    # Registra o resgate como entrada em Gastos Mensais (mesmo mecanismo da retirada;
+    # resgate já é um fato consumado, então nasce com previsto == realizado)
     receita = ReceitaExtra(
         descricao=form.descricao.data or f'Resgate no vencimento: {base.nome}',
         tipo='Saque de Investimento',
         valor=valor_resgatado,
+        valor_realizado=valor_resgatado,
         mes=mes, ano=ano,
         instituicao_id=base.instituicao_id,
         observacao=f'Baixa por vencimento de {base.nome}',
